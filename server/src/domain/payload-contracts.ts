@@ -24,15 +24,12 @@ export const cueKindSchema = z.enum(CUE_KINDS)
 export type CueKind = z.infer<typeof cueKindSchema>
 
 /**
- * Only these kinds have a runtime renderer in InteractionRenderer.vue, so only
- * these may be authored into a payload. Non-renderable kinds stay candidate-only
- * and surface in the CoverageReport for human authoring.
+ * Only kinds with a runtime renderer in InteractionRenderer.vue may be authored
+ * into a payload. Since the frontend renderer now covers all six kinds, the set
+ * is complete; it remains the gate for any future kind added without a renderer.
+ * Non-renderable kinds stay candidate-only and surface in the CoverageReport.
  */
-export const RENDERABLE_KINDS: ReadonlySet<CueKind> = new Set<CueKind>([
-  'context_card',
-  'condition_slider',
-  'causal_stitch'
-])
+export const RENDERABLE_KINDS: ReadonlySet<CueKind> = new Set<CueKind>(CUE_KINDS)
 
 export function isRenderableKind(kind: CueKind): boolean {
   return RENDERABLE_KINDS.has(kind)

@@ -205,8 +205,9 @@ describe('AnalysisPipeline (staged)', () => {
   })
 
   it('surfaces a rule-engine insufficient direction in the coverage report', async () => {
-    // A directional-claim event → quick_judgment (non-renderable). Its direction
-    // has no rule-table signature, so the rule engine returns insufficient.
+    // A directional-claim event → quick_judgment. Its direction has no rule-table
+    // signature, so the rule engine returns insufficient; authoring proceeds
+    // (all six kinds render) but must consume the locked insufficient direction.
     const directionalGraph: SemanticGraph = {
       concepts: [],
       claims: [{ claimId: 'c-fx', statement: '美元走向取决于相对利差', evidenceIds: ['asr-1'] }],
@@ -224,7 +225,17 @@ describe('AnalysisPipeline (staged)', () => {
         }
       ]
     }
-    const author = vi.fn(async () => ({ payload: contextPayload }))
+    const quickJudgmentPayload = {
+      title: '美元一定走弱吗？',
+      options: [
+        { id: 'a', label: '未必，取决于相对利差', result: '相对利差决定汇率方向。' },
+        { id: 'b', label: '一定走弱', result: '这是绝对化判断。' }
+      ],
+      feedback: '汇率取决于相对利差与预期差。'
+    }
+    const author = vi.fn(async (_input: { direction?: { direction: string } }) => ({
+      payload: quickJudgmentPayload
+    }))
     const pipeline = new AnalysisPipeline({
       media: { prepare: async () => preparedMedia },
       asr: { transcribePreparedAudio: async () => transcript },
@@ -239,10 +250,11 @@ describe('AnalysisPipeline (staged)', () => {
       title: '方向测试'
     })
 
-    // quick_judgment is non-renderable → author NOT called, candidate stays payload-less.
-    expect(author).not.toHaveBeenCalled()
+    // quick_judgment is renderable now → authored with the LOCKED insufficient direction.
+    expect(author).toHaveBeenCalledTimes(1)
+    expect(author.mock.calls[0][0].direction?.direction).toBe('insufficient')
     expect(draft.triggerCandidates[0].kind).toBe('quick_judgment')
-    expect(draft.triggerCandidates[0].payload).toBeUndefined()
+    expect(draft.triggerCandidates[0].payload).toMatchObject({ title: quickJudgmentPayload.title })
     // direction resolved by rules to insufficient → a review decision exists.
     const resolution = coverageReport.directionResolutions.find(
       (r) => r.candidateId === 'cue-ev-fx'
@@ -251,9 +263,10 @@ describe('AnalysisPipeline (staged)', () => {
     expect(coverageReport.reviewDecisionsRequired.some((line) => line.includes('方向待裁定'))).toBe(
       true
     )
+    // All six kinds render now, so no non-renderable review line is produced.
     expect(
       coverageReport.reviewDecisionsRequired.some((line) => line.includes('非可渲染触点'))
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it('rejects analysis when media rights are not attested', async () => {

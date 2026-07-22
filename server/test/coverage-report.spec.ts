@@ -227,7 +227,8 @@ describe('buildCoverageReport', () => {
     expect(report.reviewDecisionsRequired).toContain('方向待裁定：候选 cue-y（信息不足）')
   })
 
-  it('emits a non-renderable review line for a concept_compare cue', () => {
+  it('emits a non-renderable review line when a kind lacks a renderer', () => {
+    // All six kinds render today; exercise the defensive gate with a restricted set.
     const report = buildCoverageReport({
       concepts: [concept({ evidenceIds: ['e-1'] })],
       causalEdges: [],
@@ -237,7 +238,8 @@ describe('buildCoverageReport', () => {
       ],
       rejectedCandidates: [],
       directionResolutions: [],
-      versions
+      versions,
+      renderableKinds: new Set(['context_card'])
     })
 
     expect(report.reviewDecisionsRequired).toContain(

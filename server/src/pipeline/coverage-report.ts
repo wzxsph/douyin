@@ -8,7 +8,7 @@ import type {
   DirectionResolution,
   TriggerCandidate
 } from '../domain/contracts.js'
-import { CUE_KINDS, isRenderableKind } from '../domain/payload-contracts.js'
+import { CUE_KINDS, RENDERABLE_KINDS } from '../domain/payload-contracts.js'
 
 /**
  * Deterministic coverage report builder.
@@ -41,6 +41,8 @@ export interface BuildCoverageReportInput {
   directionResolutions: DirectionResolution[]
   versions: CoverageReport['versions']
   evidenceConfidenceById?: Map<string, EvidenceConfidence>
+  /** Overridable in tests; defaults to the kinds the frontend can render. */
+  renderableKinds?: ReadonlySet<string>
 }
 
 /** Every evidenceId referenced by at least one accepted candidate. */
@@ -129,7 +131,8 @@ function buildReviewDecisions(
   conceptCoverage: CoverageCount,
   acceptedCandidates: TriggerCandidate[],
   directionResolutions: DirectionResolution[],
-  kindBalance: Record<string, number>
+  kindBalance: Record<string, number>,
+  renderableKinds: ReadonlySet<string>
 ): string[] {
   const decisions: string[] = []
 
@@ -146,7 +149,7 @@ function buildReviewDecisions(
   }
 
   for (const candidate of acceptedCandidates) {
-    if (!isRenderableKind(candidate.kind)) {
+    if (!renderableKinds.has(candidate.kind)) {
       decisions.push(
         `非可渲染触点，待补渲染器或改类型：${candidate.candidateId}（${candidate.kind}）`
       )
@@ -169,7 +172,8 @@ export function buildCoverageReport(input: BuildCoverageReportInput): CoverageRe
     rejectedCandidates,
     directionResolutions,
     versions,
-    evidenceConfidenceById
+    evidenceConfidenceById,
+    renderableKinds = RENDERABLE_KINDS
   } = input
 
   const conceptItems: SemanticItem[] = concepts.map((concept) => ({
@@ -213,7 +217,8 @@ export function buildCoverageReport(input: BuildCoverageReportInput): CoverageRe
       conceptCoverage,
       acceptedCandidates,
       sortedDirectionResolutions,
-      kindBalance
+      kindBalance,
+      renderableKinds
     ),
     versions
   }

@@ -36,9 +36,7 @@ describe('authored payload contract', () => {
     expect(payloadSchemaByKind.context_card.safeParse(bad).success).toBe(false)
   })
 
-  it('keeps the renderable-kind set to the three frontend-rendered kinds', () => {
-    expect([...RENDERABLE_KINDS].sort()).toEqual(
-      ['causal_stitch', 'condition_slider', 'context_card'].sort()
-    )
+  it('keeps the renderable-kind set in lock-step with the frontend renderer (all six)', () => {
+    expect([...RENDERABLE_KINDS].sort()).toEqual([...CUE_KINDS].sort())
   })
 })

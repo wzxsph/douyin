@@ -6,6 +6,7 @@ import {
 } from '../src/domain/payload-contracts.js'
 import type { TriggerCandidate } from '../src/domain/contracts.js'
 import { PayloadAuthor, PROMPT_VERSION } from '../src/pipeline/payload-author.js'
+import { goldenPayloads } from './fixtures/authored-payloads.js'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -62,11 +63,20 @@ interface RequestMessage {
   content: string
 }
 
+interface ToolParameters {
+  type: string
+  required: string[]
+  properties: Record<string, unknown>
+  additionalProperties: boolean
+}
+
+interface StructuredRequestBody {
+  messages: RequestMessage[]
+  tools: Array<{ function: { parameters: ToolParameters } }>
+}
+
 /** Read the JSON request body sent on a given mock call index. */
-function bodyOf(
-  fetcher: ReturnType<typeof vi.fn>,
-  callIndex: number
-): { messages: RequestMessage[] } {
+function bodyOf(fetcher: ReturnType<typeof vi.fn>, callIndex: number): StructuredRequestBody {
   const init = fetcher.mock.calls.at(callIndex)?.[1] as RequestInit | undefined
   return JSON.parse(String(init?.body))
 }
@@ -144,9 +154,59 @@ describe('PayloadAuthor', () => {
     }
   })
 
-  it('rejects a non-renderable kind without calling the model', async () => {
+  it.each(goldenPayloads)(
+    'authors $kind with a closed tool schema matching the Zod payload contract',
+    async ({ kind, payload }) => {
+      const fetcher = vi.fn(async () => toolResponse(payload))
+      const author = new PayloadAuthor(makeClient(fetcher))
+
+      const result = await author.author({
+        candidate: makeCandidate({ kind }),
+        evidenceContext: '离线证据上下文'
+      })
+
+      expect(result).toEqual({ payload })
+      const parameters = bodyOf(fetcher, 0).tools[0].function.parameters
+      const expectedFields = Object.keys(payload).sort()
+      expect(parameters.type).toBe('object')
+      expect(parameters.additionalProperties).toBe(false)
+      expect([...parameters.required].sort()).toEqual(expectedFields)
+      expect(Object.keys(parameters.properties).sort()).toEqual(expectedFields)
+    }
+  )
+
+  it('keeps choice-object and causal-string option schemas distinct', async () => {
+    const quick = goldenPayloads.find((entry) => entry.kind === 'quick_judgment')!
+    const causal = goldenPayloads.find((entry) => entry.kind === 'causal_stitch')!
+    const quickFetcher = vi.fn(async () => toolResponse(quick.payload))
+    const causalFetcher = vi.fn(async () => toolResponse(causal.payload))
+
+    await new PayloadAuthor(makeClient(quickFetcher)).author({
+      candidate: makeCandidate({ kind: quick.kind }),
+      evidenceContext: 'ctx'
+    })
+    await new PayloadAuthor(makeClient(causalFetcher)).author({
+      candidate: makeCandidate({ kind: causal.kind }),
+      evidenceContext: 'ctx'
+    })
+
+    const quickOptions = bodyOf(quickFetcher, 0).tools[0].function.parameters.properties
+      .options as {
+      items: { type: string; required: string[] }
+    }
+    const causalOptions = bodyOf(causalFetcher, 0).tools[0].function.parameters.properties
+      .options as {
+      items: { type: string }
+    }
+    expect(quickOptions.items.type).toBe('object')
+    expect([...quickOptions.items.required].sort()).toEqual(['id', 'label', 'result'])
+    expect(causalOptions.items.type).toBe('string')
+  })
+
+  it('rejects a kind outside the renderable set without calling the model', async () => {
+    // All six kinds render today; exercise the defensive gate with a restricted set.
     const fetcher = vi.fn(async () => toolResponse(cleanContextCard))
-    const author = new PayloadAuthor(makeClient(fetcher))
+    const author = new PayloadAuthor(makeClient(fetcher), 2, new Set(['context_card']))
 
     for (const kind of ['concept_compare', 'quick_judgment', 'counterexample_flip'] as const) {
       const result = await author.author({
@@ -216,6 +276,11 @@ describe('PayloadAuthor', () => {
 
     expect('payload' in result).toBe(true)
     expect(fetcher).toHaveBeenCalledTimes(2)
+    const secondUser = bodyOf(fetcher, 1).messages.find(
+      (message) => message.role === 'user'
+    )?.content
+    expect(secondUser).toContain('REQUIRED top-level fields: [title, body, keyPoint, feedback]')
+    expect(secondUser).toContain('may be nested under a "payload"')
   })
 
   it('builds a system prompt with the untrusted-input guard and the locked direction', async () => {
