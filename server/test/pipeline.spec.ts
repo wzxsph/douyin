@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AnalysisPipeline } from '../src/pipeline/analyze-video.js'
 import type { SemanticGraph } from '../src/domain/contracts.js'
+import { AppError } from '../src/domain/errors.js'
 import type { AuthoredPayload } from '../src/domain/payload-contracts.js'
 
 const asset = {
@@ -96,6 +97,85 @@ describe('AnalysisPipeline (staged)', () => {
     expect(coverageReport.versions.weightTableVersion).toBe('cue-weights.v1')
     expect(coverageReport.versions.ruleEngineVersion).toBe('direction-rules.v1')
     expect(coverageReport.kindBalance.context_card).toBe(1)
+  })
+
+  it('uses the first valid semantic extraction without retrying', async () => {
+    const extract = vi.fn().mockResolvedValueOnce(conceptGraph())
+    const pipeline = new AnalysisPipeline({
+      media: { prepare: async () => preparedMedia },
+      asr: { transcribePreparedAudio: async () => transcript },
+      ocr: { recognizeFrames: async () => ocr },
+      semantics: { extract, repair: async () => conceptGraph() },
+      payloadAuthor: { author: async () => ({ payload: contextPayload }) }
+    })
+
+    await pipeline.run({ jobId: 'job-first-extract', asset, title: '首次抽取成功' })
+
+    expect(extract).toHaveBeenCalledTimes(1)
+  })
+
+  it('retries schema-invalid extraction at most twice before succeeding', async () => {
+    const extract = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new AppError('PROVIDER_INVALID_RESPONSE', 'invalid structured output', { status: 502 })
+      )
+      .mockRejectedValueOnce(
+        new AppError('PROVIDER_INVALID_RESPONSE', 'still invalid structured output', {
+          status: 502
+        })
+      )
+      .mockResolvedValueOnce(conceptGraph())
+    const pipeline = new AnalysisPipeline({
+      media: { prepare: async () => preparedMedia },
+      asr: { transcribePreparedAudio: async () => transcript },
+      ocr: { recognizeFrames: async () => ocr },
+      semantics: { extract, repair: async () => conceptGraph() },
+      payloadAuthor: { author: async () => ({ payload: contextPayload }) }
+    })
+
+    const { draft } = await pipeline.run({ jobId: 'job-retry', asset, title: '抽取重试' })
+
+    expect(extract).toHaveBeenCalledTimes(3)
+    expect(draft.triggerCandidates).toHaveLength(1)
+  })
+
+  it('fails after the initial extraction plus two schema-invalid retries', async () => {
+    const invalidResponse = new AppError('PROVIDER_INVALID_RESPONSE', 'invalid structured output', {
+      status: 502
+    })
+    const extract = vi.fn().mockRejectedValue(invalidResponse)
+    const pipeline = new AnalysisPipeline({
+      media: { prepare: async () => preparedMedia },
+      asr: { transcribePreparedAudio: async () => transcript },
+      ocr: { recognizeFrames: async () => ocr },
+      semantics: { extract, repair: async () => conceptGraph() },
+      payloadAuthor: { author: async () => ({ payload: contextPayload }) }
+    })
+
+    await expect(
+      pipeline.run({ jobId: 'job-retry-exhausted', asset, title: '抽取重试耗尽' })
+    ).rejects.toBe(invalidResponse)
+    expect(extract).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not retry extraction failures outside PROVIDER_INVALID_RESPONSE', async () => {
+    const providerFailure = new AppError('PROVIDER_UNAVAILABLE', 'provider unavailable', {
+      status: 503
+    })
+    const extract = vi.fn().mockRejectedValue(providerFailure)
+    const pipeline = new AnalysisPipeline({
+      media: { prepare: async () => preparedMedia },
+      asr: { transcribePreparedAudio: async () => transcript },
+      ocr: { recognizeFrames: async () => ocr },
+      semantics: { extract, repair: async () => conceptGraph() },
+      payloadAuthor: { author: async () => ({ payload: contextPayload }) }
+    })
+
+    await expect(
+      pipeline.run({ jobId: 'job-non-retryable', asset, title: '不可重试错误' })
+    ).rejects.toBe(providerFailure)
+    expect(extract).toHaveBeenCalledTimes(1)
   })
 
   it('repairs an evidence-invalid graph within the bounded loop', async () => {

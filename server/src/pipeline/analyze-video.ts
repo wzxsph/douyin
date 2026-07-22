@@ -244,8 +244,10 @@ export class AnalysisPipeline {
       endMs
     }))
 
-    // Stage 2 — semantic extraction (one LLM tool call).
-    let graph = await this.dependencies.semantics.extract({
+    // Stage 2 — semantic extraction. Real models occasionally emit output that
+    // fails the strict graph schema; re-ask a bounded number of times before the
+    // job hard-fails (matches the stage table: 结构非法→修复环；耗尽→job fail).
+    let graph = await this.extractWithRetry({
       transcript,
       ocr,
       frames: prepared.frames,
@@ -406,6 +408,33 @@ export class AnalysisPipeline {
     })
 
     return { draft, coverageReport }
+  }
+
+  /**
+   * Stage 2 with a bounded re-ask: retry extraction only when the provider
+   * returned schema-invalid structured output; any other error propagates.
+   */
+  private async extractWithRetry(
+    input: Parameters<AnalysisPipelineDependencies['semantics']['extract']>[0]
+  ): Promise<SemanticGraph> {
+    let lastError: unknown
+    for (let attempt = 0; attempt <= MAX_REPAIR_ITERS; attempt += 1) {
+      try {
+        return await this.dependencies.semantics.extract(input)
+      } catch (error) {
+        if (error instanceof AppError && error.code === 'PROVIDER_INVALID_RESPONSE') {
+          lastError = error
+          continue
+        }
+        throw error
+      }
+    }
+    throw lastError instanceof AppError
+      ? lastError
+      : new AppError('PROVIDER_INVALID_RESPONSE', 'Semantic extraction failed after retries', {
+          status: 502,
+          cause: lastError
+        })
   }
 }
 
