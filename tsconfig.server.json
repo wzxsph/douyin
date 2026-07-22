@@ -1,0 +1,11 @@
+{
+  "extends": "@tsconfig/node20/tsconfig.json",
+  "include": ["server/src/**/*.ts", "server/test/**/*.ts", "vitest.server.config.ts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node", "vitest/globals"]
+  }
+}

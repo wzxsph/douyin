@@ -1,13 +1,17 @@
 <template>
-  <div class="video-wrapper" ref="videoWrapper" :class="positionName">
+  <div
+    class="video-wrapper"
+    ref="videoWrapper"
+    :class="[positionName, { 'extension-sheet-open': state.extensionSheetOpen }]"
+  >
     <Loading v-if="state.loading" style="position: absolute" />
     <!--    <video :src="item.video + '?v=123'"-->
     <video
       :poster="poster"
       ref="videoEl"
       :muted="state.isMuted"
-      preload="true"
-      loop
+      preload="metadata"
+      :loop="shouldLoop"
       x5-video-player-type="h5-page"
       :x5-video-player-fullscreen="false"
       :webkit-playsinline="true"
@@ -15,12 +19,23 @@
       :playsinline="true"
       :fullscreen="false"
       :autoplay="isPlay"
+      @loadedmetadata="onLoadedMetadata"
+      @durationchange="syncMediaClock"
+      @timeupdate="syncMediaClock"
+      @play="onNativePlay"
+      @pause="onNativePause"
+      @playing="onPlaying"
+      @waiting="onWaiting"
+      @seeking="onSeeking(true)"
+      @seeked="onSeeking(false)"
+      @ended="onEnded"
+      @ratechange="syncMediaClock"
+      @volumechange="syncMediaClock"
     >
       <source
         v-for="(urlItem, index) in item.video.play_addr.url_list"
         :key="index"
         :src="urlItem"
-        type="video/mp4"
       />
       <p>您的浏览器不支持 video 标签。</p>
     </video>
@@ -77,6 +92,13 @@
           </template>
         </div>
       </template>
+      <VideoExtensionHost
+        v-if="!isLive && !state.commentVisible"
+        :context="extensionContext"
+        :clock="mediaClock"
+        @request-seek="handleExtensionSeek"
+        @sheet-open-change="state.extensionSheetOpen = $event"
+      />
     </div>
   </div>
 </template>
@@ -91,6 +113,8 @@ import { SlideItemPlayStatus } from '@/utils/const_var'
 import { computed, onMounted, onUnmounted, provide, reactive } from 'vue'
 import { Icon } from '@iconify/vue'
 import { _css } from '@/utils/dom'
+import VideoExtensionHost from '@/features/video-extensions/VideoExtensionHost.vue'
+import type { MediaClockState, VideoContext } from '@/features/video-extensions/contracts'
 
 defineOptions({
   name: 'BaseVideo'
@@ -156,7 +180,12 @@ let state = reactive({
   status: props.isPlay ? SlideItemPlayStatus.Play : SlideItemPlayStatus.Pause,
   duration: 0,
   step: 0,
-  currentTime: -1,
+  currentTime: 0,
+  currentTimeMs: 0,
+  durationMs: 0,
+  seeking: false,
+  ended: false,
+  playbackRate: 1,
   playX: 0,
   start: { x: 0 },
   last: { x: 0, time: 0 },
@@ -171,7 +200,8 @@ let state = reactive({
     width: 0
   },
   videoScreenHeight: 0,
-  commentVisible: false
+  commentVisible: false,
+  extensionSheetOpen: false
 })
 const poster = $computed(() => {
   return _checkImgUrl(props.item.video.poster ?? props.item.video.cover.url_list[0])
@@ -182,6 +212,24 @@ const durationStyle = $computed(() => {
 const isPlaying = $computed(() => {
   return state.status === SlideItemPlayStatus.Play
 })
+const shouldLoop = $computed(() => {
+  return props.item.financeExperienceId ? false : props.item.video?.loop !== false
+})
+const extensionContext = computed<VideoContext>(() => ({
+  videoId: String(props.item.aweme_id || props.item.id || ''),
+  financeExperienceId: props.item.financeExperienceId,
+  item: props.item,
+  position: props.position
+}))
+const mediaClock = computed<MediaClockState>(() => ({
+  currentTimeMs: state.currentTimeMs,
+  durationMs: state.durationMs,
+  paused: state.paused,
+  muted: state.isMuted,
+  seeking: state.seeking,
+  ended: state.ended,
+  playbackRate: state.playbackRate
+}))
 const positionName = $computed(() => {
   return 'item-' + Object.values(props.position).join('-')
 })
@@ -199,61 +247,7 @@ onMounted(() => {
   state.height = document.body.clientHeight
   state.width = document.body.clientWidth
   videoEl.currentTime = 0
-  let fun = (e) => {
-    state.currentTime = Math.ceil(e.target.currentTime)
-    state.playX = (state.currentTime - 1) * state.step
-  }
-  videoEl.addEventListener('loadedmetadata', () => {
-    state.videoScreenHeight = videoEl.videoHeight / (videoEl.videoWidth / state.width)
-    state.duration = videoEl.duration
-    state.progressBarRect = progressEl.getBoundingClientRect()
-    state.step = state.progressBarRect.width / Math.floor(state.duration)
-    videoEl.addEventListener('timeupdate', fun)
-  })
-
-  let eventTester = (e, t: string) => {
-    videoEl.addEventListener(
-      e,
-      () => {
-        // console.log('eventTester', e, state.item.aweme_id)
-        if (e === 'playing') state.loading = false
-        if (e === 'waiting') {
-          if (!state.paused && !state.ignoreWaiting) {
-            state.loading = true
-          }
-        }
-        let s = false
-        if (s) {
-          console.log(e, t)
-        }
-      },
-      false
-    )
-  }
-
-  // eventTester("loadstart", '客户端开始请求数据'); //客户端开始请求数据
-  // eventTester("abort", '客户端主动终止下载（不是因为错误引起）'); //客户端主动终止下载（不是因为错误引起）
-  // eventTester("loadstart", '客户端开始请求数据'); //客户端开始请求数据
-  // eventTester("progress", '客户端正在请求数据'); //客户端正在请求数据
-  // // eventTester("suspend", '延迟下载'); //延迟下载
-  // eventTester("abort", '客户端主动终止下载（不是因为错误引起），'); //客户端主动终止下载（不是因为错误引起），
-  // eventTester("error", '请求数据时遇到错误'); //请求数据时遇到错误
-  // eventTester("stalled", '网速失速'); //网速失速
-  // eventTester("play", 'play()和autoplay开始播放时触发'); //play()和autoplay开始播放时触发
-  // eventTester("pause", 'pause()触发'); //pause()触发
-  // eventTester("loadedmetadata", '成功获取资源长度'); //成功获取资源长度
-  // eventTester("loadeddata"); //
-  eventTester('waiting', '等待数据，并非错误') //等待数据，并非错误
-  eventTester('playing', '开始回放') //开始回放
-  // eventTester("canplay", '/可以播放，但中途可能因为加载而暂停'); //可以播放，但中途可能因为加载而暂停
-  // eventTester("canplaythrough", '可以播放，歌曲全部加载完毕'); //可以播放，歌曲全部加载完毕
-  // eventTester("seeking", '寻找中'); //寻找中
-  // eventTester("seeked", '寻找完毕'); //寻找完毕
-  // // eventTester("timeupdate",'播放时间改变'); //播放时间改变
-  // eventTester("ended", '播放结束'); //播放结束
-  // eventTester("ratechange", '播放速率改变'); //播放速率改变
-  // eventTester("durationchange", '资源长度改变'); //资源长度改变
-  // eventTester("volumechange", '音量改变'); //音量改变
+  state.progressBarRect = progressEl.getBoundingClientRect()
 
   // console.log('mounted')
   // bus.off('singleClickBroadcast')
@@ -282,6 +276,78 @@ onUnmounted(() => {
 
 function removeMuted() {
   state.isMuted = false
+  syncMediaClock()
+}
+
+function onLoadedMetadata() {
+  if (!videoEl) return
+  state.videoScreenHeight = videoEl.videoWidth
+    ? videoEl.videoHeight / (videoEl.videoWidth / state.width)
+    : state.height
+  state.progressBarRect = progressEl.getBoundingClientRect()
+  syncMediaClock()
+}
+
+function syncMediaClock() {
+  if (!videoEl) return
+  state.currentTime = Number.isFinite(videoEl.currentTime) ? videoEl.currentTime : 0
+  state.duration = Number.isFinite(videoEl.duration) ? videoEl.duration : 0
+  state.currentTimeMs = Math.round(state.currentTime * 1000)
+  state.durationMs = Math.round(state.duration * 1000)
+  state.paused = videoEl.paused
+  state.playbackRate = videoEl.playbackRate || 1
+  state.isMuted = videoEl.muted
+  state.step = state.duration ? state.progressBarRect.width / state.duration : 0
+  state.playX = state.duration
+    ? Math.max(
+        0,
+        Math.min(
+          state.progressBarRect.width,
+          (state.currentTime / state.duration) * state.progressBarRect.width
+        )
+      )
+    : 0
+}
+
+function onNativePlay() {
+  state.status = SlideItemPlayStatus.Play
+  state.paused = false
+  state.ended = false
+  syncMediaClock()
+}
+
+function onNativePause() {
+  state.status = SlideItemPlayStatus.Pause
+  state.paused = true
+  syncMediaClock()
+}
+
+function onPlaying() {
+  state.loading = false
+  onNativePlay()
+}
+
+function onWaiting() {
+  if (!state.paused && !state.ignoreWaiting) state.loading = true
+}
+
+function onSeeking(seeking: boolean) {
+  state.seeking = seeking
+  syncMediaClock()
+}
+
+function onEnded() {
+  state.ended = true
+  state.paused = true
+  state.status = SlideItemPlayStatus.Pause
+  syncMediaClock()
+}
+
+function handleExtensionSeek(positionMs: number) {
+  if (!videoEl || !Number.isFinite(positionMs)) return
+  const durationMs = state.durationMs || positionMs
+  videoEl.currentTime = Math.max(0, Math.min(positionMs, durationMs)) / 1000
+  syncMediaClock()
 }
 
 function onOpenSubType() {
@@ -363,7 +429,9 @@ function click({ uniqueId, index, type }) {
 function play() {
   state.status = SlideItemPlayStatus.Play
   videoEl.volume = 1
-  videoEl.play()
+  void videoEl.play().catch(() => {
+    state.status = SlideItemPlayStatus.Pause
+  })
 }
 
 function pause() {
@@ -388,6 +456,7 @@ function touchmove(e) {
   state.currentTime = state.last.time + Math.ceil(Math.ceil(dx) / state.step)
   if (state.currentTime <= 0) state.currentTime = 0
   if (state.currentTime >= state.duration) state.currentTime = state.duration
+  state.currentTimeMs = Math.round(state.currentTime * 1000)
 }
 
 function touchend(e) {
@@ -607,6 +676,16 @@ function touchend(e) {
         height: @h+2;
         background: white;
       }
+    }
+  }
+
+  &.extension-sheet-open {
+    .float .normal {
+      bottom: min(48vh, 420px);
+    }
+
+    .float .progress {
+      bottom: min(48vh, 420px);
     }
   }
 }

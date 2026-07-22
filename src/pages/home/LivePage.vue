@@ -118,7 +118,7 @@ import { nextTick } from 'vue'
 import { mapState } from 'pinia'
 import { useBaseStore } from '@/store/pinia'
 import { _checkImgUrl, _sleep, random } from '@/utils'
-import Mock from 'mockjs'
+import { demoChineseName, demoInteger, demoSentence } from '@/utils/demo-faker'
 
 export default {
   name: 'LivePage',
@@ -133,8 +133,8 @@ export default {
       list: [],
       barrage: [],
       barrageTemplate: () => {
-        let name = Mock.mock('@cname')
-        let a = Mock.mock('@csentence')
+        let name = demoChineseName()
+        let a = demoSentence()
         return `
         <div class="barrage">
           <div class="type">${name}</div>
@@ -144,7 +144,7 @@ export default {
       },
       userJoinedTemplate: () => {
         let src = '/images/icon/love.webp'
-        let name = Mock.mock('@cname')
+        let name = demoChineseName()
         return `
         <div class="user-joined">
           <div class="level">
@@ -171,9 +171,9 @@ export default {
         ]
         let avatar = avatarList[random(0, avatarList.length - 1)]
         let gift = '/images/icon/love.webp'
-        let name = Mock.mock('@cname')
-        let name2 = Mock.mock('@cname')
-        let num = Mock.mock('@integer(60,400)')
+        let name = demoChineseName()
+        let name2 = demoChineseName()
+        let num = demoInteger(60, 400)
         return `
         <div class="send-gift">
           <div class="left">
@@ -269,8 +269,8 @@ export default {
     },
     sendComment() {
       this.list.push({
-        name: Mock.mock('@cname'),
-        text: Mock.mock('@csentence')
+        name: demoChineseName(),
+        text: demoSentence()
       })
       nextTick(() => {
         let comments = this.$refs['comments']

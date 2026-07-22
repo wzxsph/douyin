@@ -1,0 +1,19 @@
+services:
+  caibao-analysis:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    env_file:
+      - ${CAIBAO_ENV_FILE:-.env.minimax}
+    environment:
+      API_HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:18787:18787"
+    volumes:
+      - ./media-import:/app/media-import:ro
+      - ./.analysis-work:/app/.analysis-work
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

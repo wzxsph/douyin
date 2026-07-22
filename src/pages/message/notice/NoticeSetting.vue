@@ -108,7 +108,7 @@ const data = reactive({
 })
 
 onMounted(() => {
-  data.type = route.query.type
+  data.type = String(route.query.type || 'TASK')
 })
 </script>
 

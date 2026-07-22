@@ -55,8 +55,8 @@ import WaterfallList from '@/components/WaterfallList.vue'
 import ScrollList from '@/components/ScrollList.vue'
 import { useBaseStore } from '@/store/pinia'
 import AlbumDetail from '@/pages/other/AlbumDetail.vue'
-import Mock from 'mockjs'
 import { _css } from '@/utils/dom'
+import { demoChineseName, demoInteger, demoMonthDay, demoParagraph } from '@/utils/demo-faker'
 
 const nav = useNav()
 const baseStore = useBaseStore()
@@ -126,18 +126,13 @@ function close() {
 }
 
 function showDetail(e, item) {
-  let data = Mock.mock({
-    'comment_list|3-50': [
-      {
-        name: '@cname',
-        text: '@cparagraph(3)'
-      }
-    ]
-  })
-  item.note_card.comment_list = data.comment_list
-  item.note_card.createTime = Mock.Random.date('MM-dd')
-  item.note_card.interact_info.collect_count = Mock.Random.integer(60, 3000)
-  item.note_card.interact_info.share_count = Mock.Random.integer(60, 3000)
+  item.note_card.comment_list = Array.from({ length: demoInteger(3, 50) }, () => ({
+    name: demoChineseName(),
+    text: demoParagraph(3)
+  }))
+  item.note_card.createTime = demoMonthDay()
+  item.note_card.interact_info.collect_count = demoInteger(60, 3000)
+  item.note_card.interact_info.share_count = demoInteger(60, 3000)
   state.current = cloneDeep(item)
   // console.log(state.current)
 

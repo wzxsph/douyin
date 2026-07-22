@@ -1,0 +1,13 @@
+packages:
+  - .
+
+allowBuilds:
+  core-js: true
+  esbuild: true
+  vue-demi: true
+
+minimumReleaseAgeExclude:
+  - postcss@8.5.22
+
+overrides:
+  postcss: 8.5.22

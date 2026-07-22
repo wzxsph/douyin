@@ -26,6 +26,9 @@ export const useBaseStore = defineStore('base', {
         province: '',
         city: '',
         gender: '',
+        ip_location: '',
+        uid: '',
+        short_id: '',
         school: {
           name: '',
           department: null,
@@ -55,8 +58,8 @@ export const useBaseStore = defineStore('base', {
     }
   },
   getters: {
-    selectFriends() {
-      return this.friends.all.filter((v) => v.select)
+    selectFriends(state) {
+      return (state.friends as any).all.filter((v) => v.select)
     }
   },
   actions: {

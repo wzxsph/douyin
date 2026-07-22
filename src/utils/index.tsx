@@ -235,7 +235,13 @@ export function _showSelectDialog(sexList, cb) {
   app.mount(parent)
 }
 
-export function _showSimpleConfirmDialog(title, okCb, cancelCb, okText, cancelText) {
+export function _showSimpleConfirmDialog(
+  title,
+  okCb: (event?: any) => void,
+  cancelCb: (event?: any) => void = () => {},
+  okText = '确认',
+  cancelText = '取消'
+) {
   if (!cancelCb) {
     cancelCb = () => {}
   }
@@ -246,11 +252,11 @@ export function _showSimpleConfirmDialog(title, okCb, cancelCb, okText, cancelTe
       parent.remove()
     }, 300)
   }
-  const tempOkCb = (e) => {
+  const tempOkCb = (e?: any) => {
     remove()
     okCb(e)
   }
-  const tempCancelCb = (e) => {
+  const tempCancelCb = (e?: any) => {
     remove()
     cancelCb(e)
   }
@@ -276,13 +282,13 @@ export function _showSimpleConfirmDialog(title, okCb, cancelCb, okText, cancelTe
 
 export function _showConfirmDialog(
   title,
-  subtitle,
-  subtitleColor,
-  okCb,
-  cancelCb,
-  okText,
-  cancelText,
-  cancelTextColor
+  subtitle = '',
+  subtitleColor = '',
+  okCb: (event?: any) => void = () => {},
+  cancelCb: (event?: any) => void = () => {},
+  okText = '确认',
+  cancelText = '取消',
+  cancelTextColor = ''
 ) {
   const remove = () => {
     const parent = document.querySelector('.dialog-ctn')
@@ -291,11 +297,11 @@ export function _showConfirmDialog(
       parent.remove()
     }, 300)
   }
-  const tempOkCb = (e) => {
+  const tempOkCb = (e?: any) => {
     remove()
     okCb && okCb(e)
   }
-  const tempCancelCb = (e) => {
+  const tempCancelCb = (e?: any) => {
     remove()
     cancelCb && cancelCb(e)
   }
@@ -322,7 +328,13 @@ export function _showConfirmDialog(
   app.mount(parent)
 }
 
-export function _showNoticeDialog(title, subtitle, subtitleColor, cancelCb, cancelText) {
+export function _showNoticeDialog(
+  title,
+  subtitle = '',
+  subtitleColor = '',
+  cancelCb: (event?: any) => void = () => {},
+  cancelText = '知道了'
+) {
   const remove = () => {
     const parent = document.querySelector('.dialog-ctn')
     parent.classList.replace('fade-in', 'fade-out')
@@ -330,7 +342,7 @@ export function _showNoticeDialog(title, subtitle, subtitleColor, cancelCb, canc
       parent.remove()
     }, 300)
   }
-  const tempCancelCb = (e) => {
+  const tempCancelCb = (e?: any) => {
     remove()
     cancelCb(e)
   }

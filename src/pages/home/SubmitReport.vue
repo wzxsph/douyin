@@ -70,8 +70,8 @@ const data = reactive({
 })
 
 onMounted(() => {
-  data.type = route.query.type
-  data.mode = route.query.mode
+  data.type = String(route.query.type || data.type)
+  data.mode = String(route.query.mode || data.mode)
 })
 
 async function upload() {

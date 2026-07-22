@@ -78,7 +78,7 @@ import { nextTick, onMounted, reactive } from 'vue'
 import FromBottomDialog from '@/components/dialog/FromBottomDialog.vue'
 import Scroll from '@/components/Scroll.vue'
 import { useNav } from '@/utils/hooks/useNav'
-import { _sleep } from '@/utils'
+import { _no, _sleep } from '@/utils'
 
 defineOptions({
   name: 'MoneyNotice'

@@ -12,7 +12,18 @@ node_modules
 dist
 dist-ssr
 coverage
+test-results
+playwright-report
 *.local
+
+# Server-only secrets and generated analysis artifacts.
+.env
+.env.*
+!.env.example
+!.env.*.example
+.analysis-work/
+media-import/*
+!media-import/.gitkeep
 
 /cypress/videos/
 /cypress/screenshots/
