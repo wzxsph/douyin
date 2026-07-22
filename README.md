@@ -30,6 +30,18 @@
 <img width="150px" src='docs/imgs/5.gif' />
 </div>
 
+## 本 Fork：财包（Caibao）财经内容分析能力
+
+本 fork 在原版短视频模拟器基础上新增了 **财包**——面向财经类短视频的 AI 陪伴分析能力：
+识别视频时间轴上的关键概念/因果节点，以轻量半屏卡片做知识解释，不遮挡原视频、不暂停播放、
+不提供买卖建议。相关改动在 `feat/caibao-analysis-pipeline` 分支。
+
+- 体验入口：`/?demo=finance-fed`
+- 使用范围与内容边界：见 [`NOTICE-FINANCE-DEMO.md`](NOTICE-FINANCE-DEMO.md)
+- 产品设计与架构文档：见产品仓 [wzxsph/caibao](https://github.com/wzxsph/caibao)
+
+以下为原 `douyin-vue` 模拟器说明，功能与协议保持不变。
+
 ## 在线访问
  
 Github Pages: [https://dy.typewords.cc/](https://dy.typewords.cc/)  
