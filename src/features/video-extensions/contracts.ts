@@ -26,3 +26,29 @@ export interface VideoExtensionDefinition {
   match: (context: VideoContext) => boolean
   component: Component
 }
+
+export interface PauseForInteractionRequest {
+  type: 'pause-for-interaction'
+  interactionId: string
+}
+
+export type InteractionExitReason =
+  | 'completed'
+  | 'skipped'
+  | 'closed'
+  | 'context-change'
+  | 'unmounted'
+
+export interface ReleaseInteractionRequest {
+  type: 'release-interaction'
+  interactionId: string
+  reason: InteractionExitReason
+  allowResume: boolean
+}
+
+export interface InteractionPlaybackSnapshot {
+  interactionId: string
+  videoId: string
+  wasPlayingBeforeInteraction: boolean
+  pausePositionMs: number
+}
