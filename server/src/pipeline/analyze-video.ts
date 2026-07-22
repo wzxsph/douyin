@@ -26,7 +26,7 @@ import type {
   SemanticWindow
 } from '../providers/semantic-graph-analyzer.js'
 import { buildCoverageReport } from './coverage-report.js'
-import { planCueCandidates } from './cue-planner.js'
+import { MAX_AUTOMATIC_CUES, MIN_CUE_GAP_MS, planCueCandidates } from './cue-planner.js'
 import { scoreEvents, WEIGHT_TABLE_VERSION } from './cue-scorer.js'
 import { RULE_ENGINE_VERSION, resolveDirection } from './direction-rules.js'
 import { PROMPT_VERSION } from './payload-author.js'
@@ -290,8 +290,8 @@ export class AnalysisPipeline {
     // Stage 6 — deterministic scorer → planner.
     const scored = scoreEvents(graph.semanticEvents, timeline)
     const plan = planCueCandidates(scored.candidates, {
-      maxAutomaticCues: 6,
-      minGapMs: 45_000,
+      maxAutomaticCues: MAX_AUTOMATIC_CUES,
+      minGapMs: MIN_CUE_GAP_MS,
       durationMs: prepared.durationMs,
       knownEvidenceIds
     })

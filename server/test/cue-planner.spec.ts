@@ -22,6 +22,16 @@ function candidate(overrides: Partial<TriggerCandidate> = {}): TriggerCandidate 
   }
 }
 
+function candidateAt(candidateId: string, startMs: number, priority: number): TriggerCandidate {
+  return candidate({
+    candidateId,
+    sourceEventId: `event-${candidateId}`,
+    proposedStartMs: startMs,
+    proposedEndMs: startMs + 5_000,
+    priority
+  })
+}
+
 describe('deterministic cue planner', () => {
   it('enforces evidence, safety, max count and a 45-second gap', () => {
     const result = planCueCandidates(
@@ -36,7 +46,7 @@ describe('deterministic cue planner', () => {
           prompt: '现在应该买入什么？'
         })
       ],
-      { maxAutomaticCues: 6, minGapMs: 45_000 }
+      { maxAutomaticCues: 4, minGapMs: 45_000 }
     )
 
     expect(result.accepted.map((item) => item.candidateId)).toEqual(['cue-1', 'cue-2'])
@@ -49,12 +59,17 @@ describe('deterministic cue planner', () => {
     )
   })
 
-  it('is deterministic for the same input', () => {
+  it('is deterministic across input orderings', () => {
     const input = [
-      candidate({ candidateId: 'lower', priority: 60 }),
-      candidate({ candidateId: 'higher', priority: 90, proposedStartMs: 10_100 })
+      candidateAt('early', 0, 60),
+      candidateAt('middle', 44_000, 100),
+      candidateAt('late', 88_000, 60),
+      candidateAt('latest', 133_000, 55)
     ]
-    expect(planCueCandidates(input)).toEqual(planCueCandidates(input))
+    const expected = planCueCandidates(input)
+
+    expect(planCueCandidates([...input].reverse())).toEqual(expected)
+    expect(planCueCandidates([input[2], input[0], input[3], input[1]])).toEqual(expected)
   })
 
   it('keeps the higher-priority cue when candidates violate the minimum gap', () => {
@@ -90,5 +105,107 @@ describe('deterministic cue planner', () => {
 
     expect(result.accepted.map((item) => item.candidateId)).toEqual(['flip'])
     expect(result.rejected).toEqual([])
+  })
+
+  it('maximizes total learning value instead of taking a central greedy winner', () => {
+    const result = planCueCandidates([
+      candidateAt('early-60', 0, 60),
+      candidateAt('middle-100', 44_000, 100),
+      candidateAt('late-60', 88_000, 60)
+    ])
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual(['early-60', 'late-60'])
+    expect(result.accepted.reduce((total, item) => total + item.priority, 0)).toBe(120)
+    expect(result.rejected).toContainEqual({
+      candidateId: 'middle-100',
+      reason: 'MIN_GAP_VIOLATION'
+    })
+  })
+
+  it('prefers more cues when total learning value ties', () => {
+    const result = planCueCandidates([
+      candidateAt('early-50', 0, 50),
+      candidateAt('middle-100', 44_000, 100),
+      candidateAt('late-50', 88_000, 50)
+    ])
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual(['early-50', 'late-50'])
+  })
+
+  it('prefers the earlier time sequence when score and count tie', () => {
+    const result = planCueCandidates([
+      candidateAt('start-0', 0, 50),
+      candidateAt('start-1', 1_000, 50),
+      candidateAt('finish', 46_000, 50)
+    ])
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual(['start-0', 'finish'])
+  })
+
+  it('uses candidate ID as the final deterministic tie-break', () => {
+    const result = planCueCandidates([candidateAt('cue-b', 0, 50), candidateAt('cue-a', 0, 50)])
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual(['cue-a'])
+  })
+
+  it('accepts exactly 45-second spacing and rejects 44,999ms spacing', () => {
+    const result = planCueCandidates([
+      candidateAt('start', 0, 100),
+      candidateAt('too-close', 44_999, 90),
+      candidateAt('on-boundary', 45_000, 80)
+    ])
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual(['start', 'on-boundary'])
+    expect(result.rejected).toContainEqual({
+      candidateId: 'too-close',
+      reason: 'MIN_GAP_VIOLATION'
+    })
+  })
+
+  it('caps automatic cues at the four highest-value non-conflicting candidates', () => {
+    const result = planCueCandidates(
+      [
+        candidateAt('cue-1', 0, 10),
+        candidateAt('cue-2', 45_000, 20),
+        candidateAt('cue-3', 90_000, 30),
+        candidateAt('cue-4', 135_000, 40),
+        candidateAt('cue-5', 180_000, 50)
+      ],
+      { maxAutomaticCues: 6 }
+    )
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual([
+      'cue-2',
+      'cue-3',
+      'cue-4',
+      'cue-5'
+    ])
+    expect(result.rejected).toContainEqual({ candidateId: 'cue-1', reason: 'MAX_CUE_COUNT' })
+  })
+
+  it('keeps the optimal spaced set on dense candidates instead of collapsing to one', () => {
+    // Regression from a real 110s video: 10 clustered events with rising priority
+    // collapsed to a single survivor under start-time greedy with eviction. The
+    // weighted interval selection must retain every cue in the best 45s-spaced plan.
+    const dense = [5, 20, 50, 70, 95].map((seconds, index) =>
+      candidate({
+        candidateId: `dense-${seconds}s`,
+        proposedStartMs: seconds * 1000,
+        proposedEndMs: seconds * 1000 + 5000,
+        priority: 50 + index * 10
+      })
+    )
+    const result = planCueCandidates(dense, { maxAutomaticCues: 4, minGapMs: 45_000 })
+
+    expect(result.accepted.length).toBeGreaterThanOrEqual(3)
+    expect(result.accepted.map((item) => item.candidateId)).toEqual([
+      'dense-5s',
+      'dense-50s',
+      'dense-95s'
+    ])
+    const starts = result.accepted.map((item) => item.proposedStartMs)
+    for (let index = 1; index < starts.length; index += 1) {
+      expect(starts[index] - starts[index - 1]).toBeGreaterThanOrEqual(45_000)
+    }
   })
 })
