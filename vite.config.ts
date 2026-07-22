@@ -18,7 +18,7 @@ export default defineConfig(({ mode }): Promise<UserConfig> => {
         latestCommitHash = commit.shortHash
       }
       resolve({
-        base: './',
+        base: mode === 'gp_pages' ? '/douyin/' : './',
         envDir: 'env',
         plugins: [
           VueMacros({
