@@ -3,8 +3,8 @@ import type { CueRejectionReason, TriggerCandidate } from '../domain/contracts.j
 const unsafeFinancialLanguage =
   /(买入|卖出|加仓|减仓|仓位|目标价|稳赚|必涨|必跌|推荐.{0,6}(股票|基金|黄金|资产)|买什么)/i
 
-export const MAX_AUTOMATIC_CUES = 4
 export const MIN_CUE_GAP_MS = 45_000
+export const MAX_CONTENT_NODES = 6
 
 export interface CuePlanResult {
   accepted: TriggerCandidate[]
@@ -104,44 +104,40 @@ function findPredecessorIndexes(candidates: TriggerCandidate[], minGapMs: number
  */
 function selectOptimalCandidates(
   candidates: TriggerCandidate[],
-  maxAutomaticCues: number,
+  maxContentNodes: number,
   minGapMs: number
 ): CandidatePlan {
   const predecessors = findPredecessorIndexes(candidates, minGapMs)
   const emptyPlan = (): CandidatePlan => ({ totalPriority: 0, candidates: [] })
   const best: CandidatePlan[][] = Array.from({ length: candidates.length + 1 }, () =>
-    Array.from({ length: maxAutomaticCues + 1 }, emptyPlan)
+    Array.from({ length: maxContentNodes + 1 }, emptyPlan)
   )
 
   for (let itemCount = 1; itemCount <= candidates.length; itemCount += 1) {
     const candidate = candidates[itemCount - 1]
-    for (let cueLimit = 1; cueLimit <= maxAutomaticCues; cueLimit += 1) {
-      const withoutCandidate = best[itemCount - 1][cueLimit]
+    for (let nodeLimit = 1; nodeLimit <= maxContentNodes; nodeLimit += 1) {
+      const withoutCandidate = best[itemCount - 1][nodeLimit]
       const predecessorRow = predecessors[itemCount - 1] + 1
-      const compatiblePlan = best[predecessorRow][cueLimit - 1]
+      const compatiblePlan = best[predecessorRow][nodeLimit - 1]
       const withCandidate: CandidatePlan = {
         totalPriority: compatiblePlan.totalPriority + candidate.priority,
         candidates: [...compatiblePlan.candidates, candidate]
       }
-      best[itemCount][cueLimit] = betterPlan(withCandidate, withoutCandidate)
+      best[itemCount][nodeLimit] = betterPlan(withCandidate, withoutCandidate)
     }
   }
 
-  return best[candidates.length][maxAutomaticCues]
+  return best[candidates.length][maxContentNodes]
 }
 
 export function planCueCandidates(
   candidates: TriggerCandidate[],
   options: {
-    maxAutomaticCues?: number
     minGapMs?: number
     durationMs?: number
     knownEvidenceIds?: Set<string>
   } = {}
 ): CuePlanResult {
-  const rawMax = options.maxAutomaticCues ?? MAX_AUTOMATIC_CUES
-  const requestedMax = Number.isFinite(rawMax) ? Math.floor(rawMax) : MAX_AUTOMATIC_CUES
-  const maxAutomaticCues = Math.max(0, Math.min(MAX_AUTOMATIC_CUES, requestedMax))
   const rawGap = options.minGapMs ?? MIN_CUE_GAP_MS
   const requestedGap = Number.isFinite(rawGap) ? Math.floor(rawGap) : MIN_CUE_GAP_MS
   const minGapMs = Math.max(MIN_CUE_GAP_MS, requestedGap)
@@ -158,7 +154,7 @@ export function planCueCandidates(
     else eligible.push(candidate)
   }
 
-  const optimal = selectOptimalCandidates(eligible, maxAutomaticCues, minGapMs)
+  const optimal = selectOptimalCandidates(eligible, MAX_CONTENT_NODES, minGapMs)
   const accepted = optimal.candidates
   const acceptedSet = new Set(accepted)
   for (const candidate of eligible) {
@@ -168,7 +164,7 @@ export function planCueCandidates(
     )
     rejectedWithCandidate.push({
       candidate,
-      reason: violatesGap ? 'MIN_GAP_VIOLATION' : 'MAX_CUE_COUNT'
+      reason: violatesGap ? 'MIN_GAP_VIOLATION' : 'MAX_CONTENT_NODE_COUNT'
     })
   }
 

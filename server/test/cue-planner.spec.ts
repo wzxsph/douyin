@@ -33,7 +33,7 @@ function candidateAt(candidateId: string, startMs: number, priority: number): Tr
 }
 
 describe('deterministic cue planner', () => {
-  it('enforces evidence, safety, max count and a 45-second gap', () => {
+  it('enforces evidence, safety and a 45-second gap', () => {
     const result = planCueCandidates(
       [
         candidate(),
@@ -46,7 +46,7 @@ describe('deterministic cue planner', () => {
           prompt: '现在应该买入什么？'
         })
       ],
-      { maxAutomaticCues: 4, minGapMs: 45_000 }
+      { minGapMs: 45_000 }
     )
 
     expect(result.accepted.map((item) => item.candidateId)).toEqual(['cue-1', 'cue-2'])
@@ -162,25 +162,23 @@ describe('deterministic cue planner', () => {
     })
   })
 
-  it('caps automatic cues at the four highest-value non-conflicting candidates', () => {
-    const result = planCueCandidates(
-      [
-        candidateAt('cue-1', 0, 10),
-        candidateAt('cue-2', 45_000, 20),
-        candidateAt('cue-3', 90_000, 30),
-        candidateAt('cue-4', 135_000, 40),
-        candidateAt('cue-5', 180_000, 50)
-      ],
-      { maxAutomaticCues: 6 }
-    )
+  it('does not impose a separate automatic-cue cap below the content-node limit', () => {
+    const result = planCueCandidates([
+      candidateAt('cue-1', 0, 10),
+      candidateAt('cue-2', 45_000, 20),
+      candidateAt('cue-3', 90_000, 30),
+      candidateAt('cue-4', 135_000, 40),
+      candidateAt('cue-5', 180_000, 50)
+    ])
 
     expect(result.accepted.map((item) => item.candidateId)).toEqual([
+      'cue-1',
       'cue-2',
       'cue-3',
       'cue-4',
       'cue-5'
     ])
-    expect(result.rejected).toContainEqual({ candidateId: 'cue-1', reason: 'MAX_CUE_COUNT' })
+    expect(result.rejected).toEqual([])
   })
 
   it('keeps the optimal spaced set on dense candidates instead of collapsing to one', () => {
@@ -195,7 +193,7 @@ describe('deterministic cue planner', () => {
         priority: 50 + index * 10
       })
     )
-    const result = planCueCandidates(dense, { maxAutomaticCues: 4, minGapMs: 45_000 })
+    const result = planCueCandidates(dense, { minGapMs: 45_000 })
 
     expect(result.accepted.length).toBeGreaterThanOrEqual(3)
     expect(result.accepted.map((item) => item.candidateId)).toEqual([
@@ -207,5 +205,50 @@ describe('deterministic cue planner', () => {
     for (let index = 1; index < starts.length; index += 1) {
       expect(starts[index] - starts[index - 1]).toBeGreaterThanOrEqual(45_000)
     }
+  })
+
+  it('accepts all six compatible cues', () => {
+    const result = planCueCandidates(
+      [
+        candidateAt('cue-1', 0, 100),
+        candidateAt('cue-2', 45_000, 90),
+        candidateAt('cue-3', 90_000, 80),
+        candidateAt('cue-4', 135_000, 70),
+        candidateAt('cue-5', 180_000, 60),
+        candidateAt('cue-6', 225_000, 50)
+      ],
+      { minGapMs: 45_000 }
+    )
+    expect(result.accepted.map((item) => item.candidateId)).toEqual([
+      'cue-1',
+      'cue-2',
+      'cue-3',
+      'cue-4',
+      'cue-5',
+      'cue-6'
+    ])
+    expect(result.rejected).toEqual([])
+  })
+
+  it('keeps the best six when a draft exceeds the content-node limit', () => {
+    const result = planCueCandidates([
+      candidateAt('cue-1', 0, 10),
+      candidateAt('cue-2', 45_000, 20),
+      candidateAt('cue-3', 90_000, 30),
+      candidateAt('cue-4', 135_000, 40),
+      candidateAt('cue-5', 180_000, 50),
+      candidateAt('cue-6', 225_000, 60),
+      candidateAt('cue-7', 270_000, 70)
+    ])
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual([
+      'cue-2',
+      'cue-3',
+      'cue-4',
+      'cue-5',
+      'cue-6',
+      'cue-7'
+    ])
+    expect(result.rejected).toEqual([{ candidateId: 'cue-1', reason: 'MAX_CONTENT_NODE_COUNT' }])
   })
 })

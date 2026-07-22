@@ -1,12 +1,20 @@
 import { approvedExperienceSchema, type ApprovedExperience } from './contracts'
 import { financeFedExperience } from './fixtures/finance-fed-v1'
+import { financeXiaolinFifaExperience } from './fixtures/finance-xiaolin-fifa'
+import { financeXiaolinAiPowerExperience } from './fixtures/finance-xiaolin-ai-power'
+import { financeXiaolinAutopilotExperience } from './fixtures/finance-xiaolin-autopilot'
+import { financeXiaolinAiCapitalExperience } from './fixtures/finance-xiaolin-ai-capital'
 
 export interface ExperienceRepository {
   getExperience(experienceId: string): Promise<ApprovedExperience | null>
 }
 
 const staticExperiences: Record<string, ApprovedExperience> = {
-  [financeFedExperience.experienceId]: financeFedExperience
+  [financeFedExperience.experienceId]: financeFedExperience,
+  [financeXiaolinFifaExperience.experienceId]: financeXiaolinFifaExperience,
+  [financeXiaolinAiPowerExperience.experienceId]: financeXiaolinAiPowerExperience,
+  [financeXiaolinAutopilotExperience.experienceId]: financeXiaolinAutopilotExperience,
+  [financeXiaolinAiCapitalExperience.experienceId]: financeXiaolinAiCapitalExperience
 }
 
 export class StaticExperienceRepository implements ExperienceRepository {
