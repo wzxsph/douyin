@@ -12,12 +12,7 @@ vi.mock('@/store/pinia', () => ({
   useBaseStore: () => ({ users: [] })
 }))
 
-const experienceIds = [
-  'finance-xiaolin-fifa',
-  'finance-xiaolin-ai-power',
-  'finance-xiaolin-autopilot',
-  'finance-xiaolin-ai-capital'
-]
+const experienceIds = AUTHORIZED_VIDEO_IDS.map((videoId) => `finance-showcase-${videoId}`)
 
 function catalogItem(videoId: string, index: number) {
   return {
@@ -30,8 +25,8 @@ function catalogItem(videoId: string, index: number) {
     durationMs: 180_000 + index,
     width: 1080,
     height: 1920,
-    sourceSha256: String(index + 1).repeat(64),
-    derivativeSha256: String(index + 5).repeat(64),
+    sourceSha256: (index + 1).toString(16).padStart(64, '0'),
+    derivativeSha256: (index + 101).toString(16).padStart(64, '0'),
     mediaUrl: `/api/finance/v1/media/${videoId}/video`,
     posterUrl: `/api/finance/v1/media/${videoId}/poster`
   }
@@ -63,19 +58,19 @@ afterEach(() => {
 })
 
 describe('manifest-only recommendation feeds', () => {
-  it('returns the same four manifest-backed ids for normal and long-video feeds', async () => {
+  it('returns the same manifest-backed ids for normal and long-video feeds', async () => {
     stubCatalog(AUTHORIZED_VIDEO_IDS.map(catalogItem))
     await startMock()
 
     const recommended = await axiosInstance.get('/video/recommended', {
-      params: { start: 0, pageSize: 10 }
+      params: { start: 0, pageSize: AUTHORIZED_VIDEO_IDS.length }
     })
     const longRecommended = await axiosInstance.get('/video/long/recommended/', {
-      params: { pageNo: 0, pageSize: 10 }
+      params: { pageNo: 0, pageSize: AUTHORIZED_VIDEO_IDS.length }
     })
 
     for (const response of [recommended, longRecommended]) {
-      expect(response.data.total).toBe(4)
+      expect(response.data.total).toBe(AUTHORIZED_VIDEO_IDS.length)
       expect(response.data.list.map((item: { aweme_id: string }) => item.aweme_id)).toEqual(
         AUTHORIZED_VIDEO_IDS
       )

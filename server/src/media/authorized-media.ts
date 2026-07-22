@@ -4,6 +4,7 @@ import { mkdir, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/
 import path from 'node:path'
 import { z } from 'zod'
 import { AppError } from '../domain/errors.js'
+import { SHOWCASE_EXPERIENCE_BY_VIDEO_ID } from '../showcase/content-seeds.js'
 import { NodeCommandRunner, type CommandRunner } from './ffmpeg.js'
 
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/)
@@ -367,12 +368,7 @@ interface FileIdentity {
 }
 
 export const AUTHORIZED_FINANCE_EXPERIENCE_BY_VIDEO_ID: Readonly<Record<string, string>> =
-  Object.freeze({
-    '7664748624454192393': 'finance-xiaolin-fifa',
-    '7660817965343870248': 'finance-xiaolin-ai-power',
-    '7660177158400216347': 'finance-xiaolin-autopilot',
-    '7659728419487337747': 'finance-xiaolin-ai-capital'
-  })
+  SHOWCASE_EXPERIENCE_BY_VIDEO_ID
 
 function exclusion(code: string, reason: string, videoId?: string): AuthorizedMediaExclusion {
   return { ...(videoId ? { videoId } : {}), code, reason }
@@ -970,6 +966,12 @@ export class AuthorizedMediaPreparer {
       runner?: CommandRunner
       probe?: MediaProbe
       now?: () => Date
+      maxLongEdge?: number
+      videoPreset?: string
+      videoCrf?: number
+      maxVideoBitrateKbps?: number
+      audioBitrate?: string
+      posterLongEdge?: number
     }
   ) {
     this.runner = options.runner ?? new NodeCommandRunner()
@@ -1045,6 +1047,20 @@ export class AuthorizedMediaPreparer {
         const videoPath = path.join(temporaryDirectory, videoRelativePath)
         const posterPath = path.join(temporaryDirectory, posterRelativePath)
 
+        const maxLongEdge = this.options.maxLongEdge
+        const videoFilter = maxLongEdge
+          ? item.width >= item.height
+            ? `scale=${Math.min(item.width, maxLongEdge)}:-2`
+            : `scale=-2:${Math.min(item.height, maxLongEdge)}`
+          : undefined
+        const bitrateArgs = this.options.maxVideoBitrateKbps
+          ? [
+              '-maxrate',
+              `${this.options.maxVideoBitrateKbps}k`,
+              '-bufsize',
+              `${this.options.maxVideoBitrateKbps * 2}k`
+            ]
+          : []
         await this.runner.run(this.ffmpegPath, [
           '-nostdin',
           '-y',
@@ -1056,21 +1072,28 @@ export class AuthorizedMediaPreparer {
           '0:a:0?',
           '-c:v',
           'libx264',
+          ...(videoFilter ? ['-vf', videoFilter] : []),
           '-pix_fmt',
           'yuv420p',
           '-preset',
-          'medium',
+          this.options.videoPreset ?? 'medium',
           '-crf',
-          '23',
+          String(this.options.videoCrf ?? 23),
+          ...bitrateArgs,
           '-c:a',
           'aac',
           '-b:a',
-          '128k',
+          this.options.audioBitrate ?? '128k',
           '-movflags',
           '+faststart',
           videoPath
         ])
         const posterSecond = Math.min(1, Math.max(0, item.durationSeconds / 2))
+        const posterLongEdge = this.options.posterLongEdge ?? 720
+        const posterFilter =
+          item.width >= item.height
+            ? `scale=${Math.min(item.width, posterLongEdge)}:-2`
+            : `scale=-2:${Math.min(item.height, posterLongEdge)}`
         await this.runner.run(this.ffmpegPath, [
           '-nostdin',
           '-y',
@@ -1081,7 +1104,7 @@ export class AuthorizedMediaPreparer {
           '-frames:v',
           '1',
           '-vf',
-          'scale=720:-2',
+          posterFilter,
           '-q:v',
           '2',
           posterPath
@@ -1090,16 +1113,16 @@ export class AuthorizedMediaPreparer {
         const videoStat = await stat(videoPath)
         const posterStat = await stat(posterPath)
         const probed = await this.probe.probe(videoPath)
-        if (
-          !metadataMatches(probed, {
-            durationSeconds: item.durationSeconds,
-            videoCodec: 'h264',
-            audioCodec: 'aac',
-            width: item.width,
-            height: item.height,
-            pixelFormat: 'yuv420p'
-          })
-        ) {
+        const codecAndDurationMatch =
+          Math.abs(probed.durationSeconds - item.durationSeconds) <= 0.25 &&
+          probed.videoCodec.toLowerCase() === 'h264' &&
+          probed.audioCodec?.toLowerCase() === 'aac' &&
+          probed.pixelFormat === 'yuv420p'
+        const dimensionsMatch = maxLongEdge
+          ? Math.max(probed.width, probed.height) <= maxLongEdge &&
+            Math.abs(probed.width / probed.height - item.width / item.height) <= 0.02
+          : probed.width === item.width && probed.height === item.height
+        if (!codecAndDurationMatch || !dimensionsMatch) {
           throw new AppError(
             'AUTHORIZED_MEDIA_DERIVATIVE_METADATA_MISMATCH',
             'Generated browser derivative failed validation',

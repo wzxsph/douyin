@@ -12,7 +12,7 @@ const triggerBase = {
   prompt: z.string().min(1).max(40),
   learningObjective: z.string().min(1),
   evidenceIds: z.array(z.string().min(1)).min(1),
-  reviewStatus: z.literal('approved'),
+  reviewStatus: z.enum(['approved', 'mock']),
   fallbackBehavior: z.literal('collapse_to_timeline'),
   delivery: z.enum(['automatic', 'timeline_only'])
 }
@@ -131,12 +131,22 @@ export const approvedExperienceSchema = z
     videoId: z.string().min(1),
     contentVersion: z.string().min(1),
     mediaFingerprint: z.string().min(1),
-    publishStatus: z.literal('approved'),
+    publishStatus: z.enum(['approved', 'internal_poc']),
     approvalScope: z.literal('internal_poc'),
     approvalDecisionRef: z.string().min(1),
-    timecodeQuality: z.literal('estimated_accepted'),
+    timecodeQuality: z.enum(['estimated_accepted', 'estimated_mock']),
     title: z.string().min(1),
     notice: z.string().min(1),
+    generation: z
+      .object({
+        mode: z.literal('mock'),
+        provider: z.literal('deterministic_llm_mock'),
+        model: z.string().min(1),
+        promptVersion: z.string().min(1),
+        generatedAt: z.string().datetime(),
+        evidenceBasis: z.literal('title_and_manifest_metadata_only')
+      })
+      .optional(),
     constraints: z.object({
       minGapMs: z.number().int().min(45000),
       maxConcurrent: z.literal(1),

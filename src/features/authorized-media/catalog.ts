@@ -1,19 +1,14 @@
 import { z } from 'zod'
 import defaultAuthorAvatar from '@/assets/img/avatar.png'
+import { showcaseBundle } from '@/showcase/catalog'
 
-export const AUTHORIZED_VIDEO_IDS = [
-  '7664748624454192393',
-  '7660817965343870248',
-  '7660177158400216347',
-  '7659728419487337747'
-] as const
+export const AUTHORIZED_VIDEO_IDS = Object.freeze(
+  showcaseBundle.catalog.map((item) => item.videoId)
+)
 
-const experienceByVideoId: Record<string, string> = {
-  '7664748624454192393': 'finance-xiaolin-fifa',
-  '7660817965343870248': 'finance-xiaolin-ai-power',
-  '7660177158400216347': 'finance-xiaolin-autopilot',
-  '7659728419487337747': 'finance-xiaolin-ai-capital'
-}
+const experienceByVideoId: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(showcaseBundle.catalog.map((item) => [item.videoId, item.financeExperienceId]))
+)
 
 const catalogItemSchema = z.object({
   videoId: z.string().min(1),
@@ -115,8 +110,8 @@ export async function loadAuthorizedMediaCatalog(
   const normalizedBase = baseUrl.replace(/\/$/, '')
   const controller = new AbortController()
   // A cold catalog load verifies source and derivative fingerprints plus ffprobe metadata.
-  // Four local PoC assets take ~3.6s on the reference machine, so keep startup fail-closed
-  // without racing a valid first inspection.
+  // The local catalog verifies source/derivative fingerprints and ffprobe metadata.
+  // Keep startup fail-closed without racing a valid first inspection.
   const timeout = setTimeout(() => controller.abort(), 10_000)
   try {
     const response = await fetcher(`${normalizedBase}/api/finance/v1/media/catalog`, {

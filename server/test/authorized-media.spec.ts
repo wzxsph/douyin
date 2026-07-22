@@ -250,13 +250,9 @@ afterEach(async () => {
 })
 
 describe('AuthorizedMediaService', () => {
-  it('locks the four authorized videos to their reviewed finance experiences', () => {
-    expect(AUTHORIZED_FINANCE_EXPERIENCE_BY_VIDEO_ID).toEqual({
-      '7664748624454192393': 'finance-xiaolin-fifa',
-      '7660817965343870248': 'finance-xiaolin-ai-power',
-      '7660177158400216347': 'finance-xiaolin-autopilot',
-      '7659728419487337747': 'finance-xiaolin-ai-capital'
-    })
+  it('maps every showcase video to its deterministic finance experience', () => {
+    expect(Object.keys(AUTHORIZED_FINANCE_EXPERIENCE_BY_VIDEO_ID)).toHaveLength(25)
+    expect(AUTHORIZED_FINANCE_EXPERIENCE_BY_VIDEO_ID[ITEM_ID]).toBe(`finance-showcase-${ITEM_ID}`)
   })
 
   it('returns only fully verified allowlisted media without leaking local paths', async () => {
@@ -276,7 +272,7 @@ describe('AuthorizedMediaService', () => {
           durationMs: 10_250,
           sourceSha256: sha256(SOURCE_BYTES),
           derivativeSha256: sha256(DERIVATIVE_BYTES),
-          financeExperienceId: 'finance-xiaolin-fifa',
+          financeExperienceId: `finance-showcase-${ITEM_ID}`,
           mediaUrl: `/api/finance/v1/media/${ITEM_ID}/video`,
           posterUrl: `/api/finance/v1/media/${ITEM_ID}/poster`
         }

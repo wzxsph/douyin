@@ -12,7 +12,7 @@ const rawSchema = z.object({
   AUTHORIZED_DOUYIN_MANIFEST: z
     .string()
     .default('./media-import/authorized-douyin/download-manifest.json'),
-  AUTHORIZED_MEDIA_ROOT: z.string().default('./.analysis-work/authorized-media'),
+  AUTHORIZED_MEDIA_ROOT: z.string().default('./.analysis-work/showcase-media'),
   FFMPEG_PATH: z.string().default('ffmpeg'),
   FFPROBE_PATH: z.string().default('ffprobe'),
 

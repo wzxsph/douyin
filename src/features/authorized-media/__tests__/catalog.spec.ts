@@ -9,7 +9,7 @@ import {
 
 const item = {
   videoId: AUTHORIZED_VIDEO_IDS[0],
-  financeExperienceId: 'finance-xiaolin-fifa',
+  financeExperienceId: `finance-showcase-${AUTHORIZED_VIDEO_IDS[0]}`,
   title: 'FIFA 的生意',
   author: '小Lin说',
   publishedAtObserved: '2026-07-21 06:59',
@@ -28,7 +28,7 @@ function response(body: unknown, ok = true, status = 200) {
 }
 
 describe('authorized media catalog', () => {
-  it('keeps only the four explicit manifest-backed ids and normalizes total', async () => {
+  it('keeps only explicit manifest-backed ids and normalizes total', async () => {
     const fetcher = vi.fn(() =>
       response({
         batchId: 'batch-1',
@@ -126,7 +126,7 @@ describe('authorized media catalog', () => {
   it('adapts only observed metadata without fabricated engagement counts', () => {
     const video = toRecommendedVideo(item)
     expect(video.aweme_id).toBe(AUTHORIZED_VIDEO_IDS[0])
-    expect(video.financeExperienceId).toBe('finance-xiaolin-fifa')
+    expect(video.financeExperienceId).toBe(`finance-showcase-${AUTHORIZED_VIDEO_IDS[0]}`)
     expect(video.duration).toBe(item.durationMs)
     expect(video.video.cover.url_list).toEqual([item.posterUrl])
     expect(video.video.play_addr.url_list).toEqual([item.mediaUrl])
@@ -167,7 +167,7 @@ describe('authorized media catalog', () => {
   it('paginates only the provided allowlist and reports the exact total', () => {
     const videos = AUTHORIZED_VIDEO_IDS.map((videoId) => ({ videoId }))
     expect(buildAuthorizedRecommendationPage(videos, 1, 2, 'empty')).toEqual({
-      total: 4,
+      total: AUTHORIZED_VIDEO_IDS.length,
       list: [{ videoId: AUTHORIZED_VIDEO_IDS[1] }, { videoId: AUTHORIZED_VIDEO_IDS[2] }],
       emptyMessage: ''
     })

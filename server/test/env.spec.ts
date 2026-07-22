@@ -19,7 +19,7 @@ describe('runtime config', () => {
     expect(config.authorizedDouyinManifest).toMatch(
       /media-import\/authorized-douyin\/download-manifest\.json$/
     )
-    expect(config.authorizedMediaRoot).toMatch(/\.analysis-work\/authorized-media$/)
+    expect(config.authorizedMediaRoot).toMatch(/\.analysis-work\/showcase-media$/)
   })
 
   it('reports mandatory ASR and optional OCR credentials independently', () => {

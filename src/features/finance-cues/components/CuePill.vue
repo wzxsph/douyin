@@ -52,7 +52,7 @@ const accessibleLabel = computed(
 .cue-pill {
   position: absolute;
   left: 14px;
-  bottom: 104px;
+  bottom: 190px;
   z-index: 14;
   display: flex;
   box-sizing: border-box;

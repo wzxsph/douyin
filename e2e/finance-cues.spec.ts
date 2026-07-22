@@ -4,7 +4,19 @@ import { mkdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 const e2eMediaDirectory = path.resolve('.analysis-work/e2e-media')
-const e2eVideoPath = path.join(e2eMediaDirectory, 'authorized-finance-fixture.mp4')
+const e2eVideoPath = path.join(e2eMediaDirectory, 'showcase-fixture.mp4')
+const bundle = JSON.parse(
+  readFileSync(path.resolve('src/showcase/generated/showcase-bundle.json'), 'utf8')
+) as {
+  catalog: Array<{ videoId: string; author: string; title: string; sourceUrl: string }>
+  experiences: Array<{
+    videoId: string
+    triggers: Array<{ startMs: number; prompt: string }>
+  }>
+}
+const firstItem = bundle.catalog[0]
+const firstExperience = bundle.experiences.find((item) => item.videoId === firstItem.videoId)!
+const firstCue = firstExperience.triggers[0]
 
 test.beforeAll(() => {
   mkdirSync(e2eMediaDirectory, { recursive: true })
@@ -16,13 +28,13 @@ test.beforeAll(() => {
       '-f',
       'lavfi',
       '-i',
-      'color=c=black:s=180x320:r=5',
+      'color=c=0x161616:s=180x320:r=5',
       '-f',
       'lavfi',
       '-i',
       'anullsrc=channel_layout=stereo:sample_rate=44100',
       '-t',
-      '173.710',
+      '40',
       '-c:v',
       'libx264',
       '-preset',
@@ -49,34 +61,15 @@ const viewports = [
   { width: 1280, height: 900 }
 ]
 
-const authorizedVideo = {
-  videoId: '7664748624454192393',
-  financeExperienceId: 'finance-xiaolin-fifa',
-  title: '大家看的是比赛，FIFA看的是生意',
-  author: '小Lin说',
-  publishedAtObserved: '2026-07-21 06:59',
-  aiGeneratedDisclosureObserved: false,
-  durationMs: 173_710,
-  width: 1080,
-  height: 1920,
-  sourceSha256: 'a75cb3f796e0f96d3574d3d0b210cf3276de3fe8cf8382def76b1a0edc0cb464',
-  derivativeSha256: 'b'.repeat(64),
-  mediaUrl: '/api/finance/v1/media/7664748624454192393/video',
-  posterUrl: '/api/finance/v1/media/7664748624454192393/poster'
-}
-
-async function installAuthorizedCatalog(page: Page) {
-  await page.route('**/api/finance/v1/media/7664748624454192393/video', async (route) => {
-    const media = readFileSync(e2eVideoPath)
+async function installMedia(page: Page) {
+  const media = readFileSync(e2eVideoPath)
+  await page.route('**/api/finance/v1/media/*/video', async (route) => {
     const range = route.request().headers().range
-    const commonHeaders = {
-      'Accept-Ranges': 'bytes',
-      'Content-Type': 'video/mp4'
-    }
+    const headers = { 'Accept-Ranges': 'bytes', 'Content-Type': 'video/mp4' }
     if (!range) {
       await route.fulfill({
         status: 200,
-        headers: { ...commonHeaders, 'Content-Length': String(media.byteLength) },
+        headers: { ...headers, 'Content-Length': String(media.byteLength) },
         body: route.request().method() === 'HEAD' ? undefined : media
       })
       return
@@ -85,329 +78,200 @@ async function installAuthorizedCatalog(page: Page) {
     if (!match || (!match[1] && !match[2])) {
       await route.fulfill({
         status: 416,
-        headers: { ...commonHeaders, 'Content-Range': `bytes */${media.byteLength}` }
+        headers: { ...headers, 'Content-Range': `bytes */${media.byteLength}` }
       })
       return
     }
-    const requestedStart = match[1]
-      ? Number(match[1])
-      : Math.max(0, media.byteLength - Number(match[2]))
+    const start = match[1] ? Number(match[1]) : Math.max(0, media.byteLength - Number(match[2]))
     const requestedEnd = match[1]
       ? match[2]
         ? Number(match[2])
         : media.byteLength - 1
       : media.byteLength - 1
     if (
-      !Number.isSafeInteger(requestedStart) ||
+      !Number.isSafeInteger(start) ||
       !Number.isSafeInteger(requestedEnd) ||
-      requestedStart < 0 ||
-      requestedStart >= media.byteLength ||
-      requestedEnd < requestedStart
+      start < 0 ||
+      requestedEnd < start ||
+      start >= media.byteLength
     ) {
       await route.fulfill({
         status: 416,
-        headers: { ...commonHeaders, 'Content-Range': `bytes */${media.byteLength}` }
+        headers: { ...headers, 'Content-Range': `bytes */${media.byteLength}` }
       })
       return
     }
     const end = Math.min(requestedEnd, media.byteLength - 1)
-    const body = media.subarray(requestedStart, end + 1)
+    const body = media.subarray(start, end + 1)
     await route.fulfill({
       status: 206,
       headers: {
-        ...commonHeaders,
+        ...headers,
         'Content-Length': String(body.byteLength),
-        'Content-Range': `bytes ${requestedStart}-${end}/${media.byteLength}`
+        'Content-Range': `bytes ${start}-${end}/${media.byteLength}`
       },
       body: route.request().method() === 'HEAD' ? undefined : body
     })
   })
-  await page.route('**/api/finance/v1/media/7664748624454192393/poster', async (route) => {
-    await route.fulfill({ status: 404, body: '' })
-  })
-  await page.route('**/api/finance/v1/media/catalog', async (route) => {
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({
-        batchId: 'e2e-authorized-media',
-        status: 'ready',
-        expiresAt: '2026-08-22',
-        total: 1,
-        items: [authorizedVideo],
-        exclusions: []
-      })
-    })
-  })
+  await page.route('**/api/finance/v1/media/*/poster', (route) =>
+    route.fulfill({ status: 404, body: '' })
+  )
 }
 
-async function installExpiredCatalog(page: Page) {
-  await page.route('**/api/finance/v1/media/catalog', async (route) => {
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({
-        batchId: 'e2e-authorized-media',
-        status: 'expired',
-        expiresAt: '2026-08-22T23:59:59.999+08:00',
-        total: 0,
-        items: [],
-        exclusions: [{ code: 'AUTHORIZED_MEDIA_RIGHTS_EXPIRED', reason: 'expired' }]
-      })
-    })
-  })
-}
-
-async function openCleanDemo(page: Page, viewport: { width: number; height: number }) {
+async function openShowcase(page: Page, viewport = viewports[0]) {
   await page.setViewportSize(viewport)
   await page.addInitScript(() => localStorage.clear())
-  await installAuthorizedCatalog(page)
-  await page.goto('/?demo=finance-fed', { waitUntil: 'domcontentloaded' })
-  await expect(page).toHaveURL(/\/home\?demo=finance-fed/)
-  await expect(page.getByTestId('finance-cue-extension')).toBeVisible()
-  const video = page.locator('.video-wrapper:has([data-testid="finance-cue-extension"]) video')
+  await installMedia(page)
+  await page.goto('/#/home', { waitUntil: 'domcontentloaded' })
+  await expect(page).toHaveURL(/#\/home/)
+  const player = page.locator(`.showcase-player[data-video-id="${firstItem.videoId}"]`)
+  await expect(player).toBeVisible()
+  const video = player.locator('video')
   await expect
-    .poll(async () => video.evaluate((element: HTMLVideoElement) => element.duration), {
-      timeout: 15_000
-    })
-    .toBeCloseTo(authorizedVideo.durationMs / 1000, 0)
-  await video.evaluate(async (element: HTMLVideoElement) => {
-    element.muted = true
-    await element.play()
+    .poll(() => video.evaluate((node: HTMLVideoElement) => node.readyState))
+    .toBeGreaterThanOrEqual(1)
+  await video.evaluate(async (node: HTMLVideoElement) => {
+    node.muted = true
+    await node.play()
   })
-  return video
+  return { player, video }
 }
 
-async function seekForCue(page: Page, seconds: number) {
-  const video = page.locator('.video-wrapper:has([data-testid="finance-cue-extension"]) video')
-  await video.evaluate(
-    (element: HTMLVideoElement, target) => {
-      element.currentTime = target
-      element.dispatchEvent(new Event('timeupdate'))
-    },
-    Math.max(0, seconds - 0.2)
-  )
-  await page.waitForTimeout(60)
-  await video.evaluate((element: HTMLVideoElement, target) => {
-    element.currentTime = target
-    element.dispatchEvent(new Event('timeupdate'))
-  }, seconds)
-}
-
-async function openVisibleCue(page: Page, verifyHitTarget = true) {
-  const cue = page.getByTestId('finance-cue-pill')
-  await expect(cue).toHaveCount(1, { timeout: 2_000 })
-  await expect(cue).toBeVisible({ timeout: 2_000 })
-  const main = cue.locator('.cue-main')
-  if (verifyHitTarget) {
-    const hitTarget = await main.evaluate((element) => {
-      const rect = element.getBoundingClientRect()
-      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
-      return Boolean(hit && element.contains(hit))
-    })
-    expect(hitTarget).toBe(true)
-  }
-  // The base feed uses overflow-hidden virtual cards. dispatchEvent avoids
-  // Playwright's scroll-into-view changing the container scrollTop after the
-  // hit target has already been proven visible and unobstructed.
-  await main.dispatchEvent('click')
-  return cue
+async function surfaceFirstCue(page: Page) {
+  const video = page.locator(`.showcase-player[data-video-id="${firstItem.videoId}"] video`)
+  const targetSeconds = firstCue.startMs / 1000
+  await video.evaluate((node: HTMLVideoElement, target) => {
+    node.currentTime = Math.max(0, target - 0.25)
+    node.dispatchEvent(new Event('timeupdate'))
+  }, targetSeconds)
+  await page.waitForTimeout(80)
+  await video.evaluate((node: HTMLVideoElement, target) => {
+    node.currentTime = target
+    node.dispatchEvent(new Event('timeupdate'))
+  }, targetSeconds)
+  await expect(page.getByTestId('finance-cue-pill')).toBeVisible({ timeout: 2_000 })
 }
 
 for (const viewport of viewports) {
-  test(`${viewport.width}×${viewport.height} 邀请不停播、进入暂停且半屏不越界`, async ({
+  test(`${viewport.width}×${viewport.height} POI 不停播，进入暂停且半屏不越界`, async ({
     page
   }) => {
-    const video = await openCleanDemo(page, viewport)
-    await seekForCue(page, 20.1)
+    const { player, video } = await openShowcase(page, viewport)
+    await surfaceFirstCue(page)
 
     const invitation = page.getByTestId('finance-cue-pill')
-    await expect(invitation).toBeVisible()
-    const poiGeometry = await invitation.evaluate((element) => {
+    const geometry = await invitation.evaluate((element) => {
       const rect = element.getBoundingClientRect()
-      const image = element.querySelector('img')!.getBoundingClientRect()
       const main = element.querySelector('.cue-main')!.getBoundingClientRect()
       const later = element.querySelector('.later')!.getBoundingClientRect()
       return {
         width: rect.width,
         height: rect.height,
-        imageWidth: image.width,
-        imageHeight: image.height,
         mainHeight: main.height,
         laterWidth: later.width,
         laterHeight: later.height
       }
     })
-    expect(poiGeometry.width).toBeLessThanOrEqual(216.5)
-    expect(poiGeometry.height).toBeGreaterThanOrEqual(44)
-    expect(poiGeometry.height).toBeLessThanOrEqual(45)
-    expect(poiGeometry.imageWidth).toBeCloseTo(24, 0)
-    expect(poiGeometry.imageHeight).toBeCloseTo(24, 0)
-    expect(poiGeometry.mainHeight).toBeGreaterThanOrEqual(44)
-    expect(poiGeometry.laterWidth).toBeGreaterThanOrEqual(44)
-    expect(poiGeometry.laterHeight).toBeGreaterThanOrEqual(44)
+    expect(geometry.width).toBeLessThanOrEqual(216.5)
+    expect(geometry.height).toBeGreaterThanOrEqual(44)
+    expect(geometry.mainHeight).toBeGreaterThanOrEqual(44)
+    expect(geometry.laterWidth).toBeGreaterThanOrEqual(44)
+    expect(geometry.laterHeight).toBeGreaterThanOrEqual(44)
 
-    const invitationTime = await video.evaluate((element: HTMLVideoElement) => element.currentTime)
+    const beforeInvitation = await video.evaluate((node: HTMLVideoElement) => node.currentTime)
     await page.waitForTimeout(300)
-    const invitationTimeAfter = await video.evaluate(
-      (element: HTMLVideoElement) => element.currentTime
-    )
-    expect(invitationTimeAfter).toBeGreaterThan(invitationTime + 0.15)
+    const afterInvitation = await video.evaluate((node: HTMLVideoElement) => node.currentTime)
+    expect(afterInvitation).toBeGreaterThan(beforeInvitation + 0.15)
 
-    await video.evaluate((element: HTMLVideoElement) => {
-      element.muted = true
-      element.volume = 0.37
-      element.playbackRate = 1.25
+    await video.evaluate((node: HTMLVideoElement) => {
+      node.volume = 0.37
+      node.playbackRate = 1.25
     })
-    await openVisibleCue(page)
-
-    const timeBefore = await video.evaluate((element: HTMLVideoElement) => element.currentTime)
+    await invitation.locator('.cue-main').dispatchEvent('click')
     const sheet = page.getByTestId('caibao-half-sheet')
     await expect(sheet).toBeVisible()
-
-    const geometry = await sheet.evaluate((element) => {
+    const sheetGeometry = await sheet.evaluate((element) => {
       const rect = element.getBoundingClientRect()
       return {
+        height: rect.height,
+        viewportHeight: innerHeight,
         left: rect.left,
         right: rect.right,
-        bottom: rect.bottom,
-        height: rect.height,
-        viewportHeight: window.innerHeight,
-        viewportWidth: window.innerWidth
+        viewportWidth: innerWidth
       }
     })
-    expect(geometry.height / geometry.viewportHeight).toBeLessThanOrEqual(0.4801)
-    expect(geometry.left).toBeGreaterThanOrEqual(0)
-    expect(geometry.right).toBeLessThanOrEqual(geometry.viewportWidth + 0.5)
+    expect(sheetGeometry.height / sheetGeometry.viewportHeight).toBeLessThanOrEqual(0.4801)
+    expect(sheetGeometry.left).toBeGreaterThanOrEqual(0)
+    expect(sheetGeometry.right).toBeLessThanOrEqual(sheetGeometry.viewportWidth + 0.5)
     expect(page.locator('.finance-extension .mask')).toHaveCount(0)
-    expect(await video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true)
+    expect(await video.evaluate((node: HTMLVideoElement) => node.paused)).toBe(true)
 
+    const pausedAt = await video.evaluate((node: HTMLVideoElement) => node.currentTime)
     await page.waitForTimeout(450)
-    const timeAfter = await video.evaluate((element: HTMLVideoElement) => element.currentTime)
-    expect(Math.abs(timeAfter - timeBefore)).toBeLessThanOrEqual(0.25)
+    const pausedAfter = await video.evaluate((node: HTMLVideoElement) => node.currentTime)
+    expect(Math.abs(pausedAfter - pausedAt)).toBeLessThanOrEqual(0.25)
 
-    const authorSrc = await page
-      .locator('.video-wrapper:has([data-testid="finance-cue-extension"]) .toolbar .avatar')
-      .getAttribute('src')
+    const authorText = await player.locator('.author-avatar').textContent()
     const caibaoSrc = await sheet.locator('header img').getAttribute('src')
-    expect(authorSrc).not.toContain('caibao')
+    expect(authorText?.trim()).toBe(firstItem.author.slice(0, 1))
     expect(caibaoSrc).toContain('caibao')
 
-    const controls = sheet.locator('button')
-    const controlCount = await controls.count()
-    for (let index = 0; index < controlCount; index += 1) {
-      const box = await controls.nth(index).boundingBox()
-      expect(box?.height).toBeGreaterThanOrEqual(44)
-      expect(box?.width).toBeGreaterThanOrEqual(44)
-    }
-
     await sheet.getByRole('button', { name: '关闭' }).click()
-    await expect
-      .poll(() => video.evaluate((element: HTMLVideoElement) => element.paused))
-      .toBe(false)
-    const settings = await video.evaluate((element: HTMLVideoElement) => ({
-      muted: element.muted,
-      volume: element.volume,
-      playbackRate: element.playbackRate
-    }))
-    expect(settings).toEqual({ muted: true, volume: 0.37, playbackRate: 1.25 })
-    const resumedAt = await video.evaluate((element: HTMLVideoElement) => element.currentTime)
-    expect(Math.abs(resumedAt - timeAfter)).toBeLessThanOrEqual(0.25)
-    await page.waitForTimeout(300)
-    const resumedAfter = await video.evaluate((element: HTMLVideoElement) => element.currentTime)
-    expect(resumedAfter).toBeGreaterThan(resumedAt + 0.15)
+    await expect.poll(() => video.evaluate((node: HTMLVideoElement) => node.paused)).toBe(false)
+    expect(
+      await video.evaluate((node: HTMLVideoElement) => ({
+        muted: node.muted,
+        volume: node.volume,
+        playbackRate: node.playbackRate
+      }))
+    ).toEqual({ muted: true, volume: 0.37, playbackRate: 1.25 })
   })
 }
 
-test('进入前已暂停时，关闭财包后仍保持暂停且不 seek', async ({ page }) => {
-  const video = await openCleanDemo(page, viewports[0])
-  await seekForCue(page, 20.1)
-  await video.evaluate((element: HTMLVideoElement) => element.pause())
-  const before = await video.evaluate((element: HTMLVideoElement) => element.currentTime)
-
-  await openVisibleCue(page)
-  await expect(page.getByTestId('caibao-half-sheet')).toBeVisible()
+test('进入前已暂停，关闭后保持暂停且不改变位置', async ({ page }) => {
+  const { video } = await openShowcase(page)
+  await surfaceFirstCue(page)
+  await video.evaluate((node: HTMLVideoElement) => node.pause())
+  const before = await video.evaluate((node: HTMLVideoElement) => node.currentTime)
+  await page.getByTestId('finance-cue-pill').locator('.cue-main').dispatchEvent('click')
   await page.getByTestId('caibao-half-sheet').getByRole('button', { name: '关闭' }).click()
-  await page.waitForTimeout(300)
-
-  const result = await video.evaluate((element: HTMLVideoElement) => ({
-    paused: element.paused,
-    currentTime: element.currentTime
+  await page.waitForTimeout(250)
+  const result = await video.evaluate((node: HTMLVideoElement) => ({
+    paused: node.paused,
+    time: node.currentTime
   }))
   expect(result.paused).toBe(true)
-  expect(Math.abs(result.currentTime - before)).toBeLessThanOrEqual(0.25)
+  expect(Math.abs(result.time - before)).toBeLessThanOrEqual(0.25)
 })
 
-test('只有用户点击时间轴节点时才显式 seek，并在打开互动后保持暂停', async ({ page }) => {
-  const video = await openCleanDemo(page, viewports[0])
-  await video.evaluate((element: HTMLVideoElement) => {
-    element.currentTime = 42
-  })
-
-  await page.getByRole('button', { name: /回看：体育赛事怎么变成一门大生意/ }).click()
-  await expect(page.getByTestId('caibao-half-sheet')).toBeVisible()
-
-  const result = await video.evaluate((element: HTMLVideoElement) => ({
-    paused: element.paused,
-    currentTime: element.currentTime
-  }))
-  expect(result.paused).toBe(true)
-  expect(Math.abs(result.currentTime - 20)).toBeLessThanOrEqual(0.25)
+test('推荐页保留 Mock、非官方、非投资建议和原作品归属', async ({ page }) => {
+  const { player } = await openShowcase(page)
+  await expect(player.locator('.mock-chip')).toHaveText('LLM Mock')
+  await expect(player.locator('.content-notice')).toContainText('未经财经审核')
+  const source = player.getByRole('link', { name: /查看抖音原作品/ })
+  await expect(source).toHaveAttribute('href', firstItem.sourceUrl)
+  await page.locator('.project-disclosure summary').click()
+  await expect(page.locator('.project-disclosure')).toContainText('不存在官方隶属关系')
+  await expect(page.locator('.project-disclosure')).toContainText('不构成投资建议')
 })
 
-test('三类触点形成无分数的过程式学习总结', async ({ page }) => {
-  await openCleanDemo(page, viewports[0])
-
-  await seekForCue(page, 20.1)
-  await openVisibleCue(page, false)
-  await page.getByRole('button', { name: '我知道了' }).click()
-  await expect(page.getByTestId('finance-feedback')).toContainText('商业三层结构')
-  await page.getByRole('button', { name: '收好，继续看' }).click()
-
-  await seekForCue(page, 65.1)
-  await openVisibleCue(page, false)
-  await page
-    .getByTestId('finance-interaction')
-    .getByRole('button', { name: '转播权收入为主' })
-    .click()
-  await expect(page.getByTestId('finance-feedback')).toContainText('媒体合同')
-  await page.getByRole('button', { name: '收好，继续看' }).click()
-
-  await seekForCue(page, 120.1)
-  await openVisibleCue(page, false)
-  await page
-    .getByTestId('finance-interaction')
-    .getByRole('button', { name: '主办国承担场馆和基建成本，回报不确定' })
-    .click()
-  await expect(page.getByTestId('finance-feedback')).toContainText('前期投入')
-  await page.getByRole('button', { name: '收好，继续看' }).click()
-
-  await page.getByRole('button', { name: '学习足迹' }).click()
-  const summary = page.getByTestId('finance-learning-summary')
-  await expect(summary).toBeVisible()
-  await expect(summary.locator('li')).toHaveCount(3)
-  await expect(summary).not.toContainText('68%')
-  await expect(summary).not.toContainText('总分')
-  await expect(summary).not.toContainText('买入')
-  await expect(summary).not.toContainText('必涨')
+test('作者页只展示该作者的清单作品并可返回推荐流', async ({ page }) => {
+  const { player } = await openShowcase(page)
+  await player.locator('.author-avatar').click()
+  await expect(page).toHaveURL(/#\/author\/xiaolin/)
+  await expect(page.getByRole('heading', { name: '小Lin说' })).toBeVisible()
+  await expect(page.locator('.work-card')).toHaveCount(15)
+  await expect(
+    page.locator('.work-card').first().getByRole('link', { name: '原视频 ↗' })
+  ).toHaveAttribute('href', firstItem.sourceUrl)
+  await page.getByRole('link', { name: '返回推荐' }).click()
+  await expect(page).toHaveURL(/#\/home/)
 })
 
-test('普通推荐流同样只加载授权目录视频及其财经扩展', async ({ page }) => {
-  await page.setViewportSize(viewports[0])
-  await installAuthorizedCatalog(page)
-  await page.goto('/home', { waitUntil: 'domcontentloaded' })
-  const videoWrapper = page.locator('.video-wrapper:has([data-testid="finance-cue-extension"])')
-  await expect(videoWrapper).toBeVisible()
-  await expect(videoWrapper.locator('video source')).toHaveAttribute(
-    'src',
-    authorizedVideo.mediaUrl
-  )
-})
-
-test('授权目录过期时普通推荐和长视频推荐都显示明确空态', async ({ page }) => {
-  await page.setViewportSize(viewports[0])
-  await installExpiredCatalog(page)
-  await page.goto('/home', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByTestId('authorized-feed-empty')).toContainText('授权已到期')
-
-  await page.getByText('长视频', { exact: true }).dispatchEvent('click')
-  await expect(page.getByTestId('authorized-long-feed-empty')).toContainText('授权已到期')
+test('旧商城与个人中心路由不再暴露，统一回推荐页', async ({ page }) => {
+  await installMedia(page)
+  await page.goto('/#/shop', { waitUntil: 'domcontentloaded' })
+  await expect(page).toHaveURL(/#\/home/)
+  await expect(page.locator('.feed')).toBeVisible()
+  await expect(page.locator('.tabbar, .shop, .message')).toHaveCount(0)
 })

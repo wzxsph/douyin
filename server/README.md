@@ -40,14 +40,14 @@ media-import/authorized-douyin/download-manifest.json
 首次使用前显式生成浏览器兼容的 H.264/AAC 派生文件和封面：
 
 ```bash
-pnpm prepare:authorized-media
+pnpm prepare:showcase
 ```
 
-命令只写入 `.analysis-work/authorized-media/<batchId>/`，不会覆盖 `public/demo`，也不会覆盖同名
-批次。源文件、派生文件和 `.analysis-work` 均被 Git 忽略。清单、权利有效期、路径边界、bytes、
-SHA-256 或 FFprobe 任一校验失败时均 fail closed，不会回退到旧推荐视频。
-服务兼容当前 manifest schema v1/v2，但 catalog 仍只允许四个已有财经内容包映射的 videoId；
-v2 清单中的其他条目会记录为 `AUTHORIZED_MEDIA_EXPERIENCE_UNMAPPED`，不会进入推荐或媒体接口。
+命令只写入 `.analysis-work/showcase-media/<batchId>/`，不会覆盖 `public/demo`。源文件、派生文件和
+`.analysis-work` 均被 Git 忽略。清单、权利有效期、路径边界、bytes、SHA-256 或 FFprobe 任一校验
+失败时均 fail closed，不会回退到旧推荐视频。当前 schema v2 清单的 25 个 videoId 必须与
+`server/src/showcase/content-seeds.ts` 的内容种子及体验映射精确同集；缺少任一项时内容生成失败关闭。
+生成内容为 `internal_poc` / `mock`，不是财经审核或公开生产批准。
 
 只读接口：
 
