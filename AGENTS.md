@@ -1,68 +1,88 @@
 # refer/douyin｜Agent 工作约定
 
-本目录是独立应用代码仓，不是父目录产品仓的一部分。任何修改前先读
-`../../docs/AGENT_HANDOFF.md`；产品争议以 `../../财经推演室_PRD_V2.0.md` 为准。
+本目录是独立的 Vue/Vite/Express 应用仓；父目录 `/home/samsong/Desktop/maybe/caibao`
+是产品与 PRD 仓。接手前先读父仓 `AGENTS.md`、`docs/AGENT_HANDOFF.md` 和
+`财经推演室_PRD_V2.6.md`。V2.6 当前是 Review Candidate，不得写成已批准版本。
 
-## 5 分钟接手
+## 接手检查
 
 ```bash
 cd /home/samsong/Desktop/maybe/caibao/refer/douyin
 git status --short
 git branch --show-current
+git log -5 --oneline
 git remote -v
 ```
 
-- 正确分支：`feat/caibao-analysis-pipeline`。
-- `origin=https://github.com/wzxsph/douyin.git` 是项目仓；
-  `upstream=https://github.com/zyronon/douyin` 只是公共上游。
-- 不 push `upstream`；未获得用户当次明确授权也不 push `origin`。不 reset/checkout 用户工作树，不批量格式化未理解的底座文件。
-- 真实密钥只在 Git-ignored 的 `.env.minimax` / `.env.doubao`；禁止读取后打印、复制到日志或提交。
-- 本地凭据状态与安全事件见父目录交接文档，不在本文件记录任何值。
+- 当前应用分支：`refactor/moneybaby-v2.4-foundation`。
+- `origin=https://github.com/wzxsph/douyin.git`；`upstream` 只是公共底座。
+- 未获用户当次明确授权，不 push、不 force-push、不创建 PR，也不向 `upstream` 写入。
+- 工作树可能包含用户或其他 Agent 的未提交媒体/fixture；禁止 reset、checkout 覆盖或代提交。
 
-## 当前第一任务
+## V2.6 产品不变量
 
-先修正本地开发启动脚本的监听边界并加验证：`package.json` 中 `vite --host` 会覆盖
-`vite.config.ts` 的回环配置，可能监听 `0.0.0.0`。在修复前不要运行 `pnpm dev`、`pnpm start`
-或 `pnpm serve`；统一使用：
+- 关键点先出现“财包 POI 微入口”：约 44px 高、最大 216px、4–6 秒自动收起，可从时间轴重访。
+- 邀请出现时继续播放；用户点击进入互动时暂停；关闭、完成或跳过时，仅在进入前正在播放且上下文未变时恢复。
+- 半屏最高 48vh、无蒙层；作者头像与财包严格分离。打开半屏后屏蔽视频背景单击播放。
+- 自动触点不设独立数量上限，但间隔至少 45 秒、同时最多 1 个；内容包总时间轴节点最多 6 个。
+  `delivery: timeline_only` 的节点不得自动弹出，但可主动重访。
+- 播放控制不得写 `currentTime`、`muted`、`volume` 或 `playbackRate`；时间轴主动回访是唯一允许的显式 seek。
+- 报告无总分、百分比、财富画像和投资建议；未互动只写“尚未观察”。
+
+## 授权媒体单一事实源
+
+唯一推荐源是 Git-ignored 的：
+
+`media-import/authorized-douyin/download-manifest.json`
+
+- 普通推荐、财经 Demo 和长视频推荐都只消费服务端 catalog 的有效子集；
+  `?demo=finance-fed` 不决定白名单。
+- manifest schema v1/v2 均可解析，但 schema 升级或新增条目不得扩大四个固定 finance videoId 白名单；
+  其他条目必须以 `AUTHORIZED_MEDIA_EXPERIENCE_UNMAPPED` 排除。
+- catalog/API 失败、授权过期、文件/bytes/SHA/FFprobe 校验失败时 fail closed，绝不回退 `posts6.json`、
+  `videos.md`、旧媒体或随机评论。
+- 四条内容仅为 `approvalScope: internal_poc`，估算时间码由用户接受；不代表公开生产审核通过。
+- 当前授权截至 2026-08-22 上海日末，仅限本地 PoC。视频、派生文件、封面和分析产物不得提交或公开部署。
+- 浏览器派生文件只写入 `.analysis-work/authorized-media/<batchId>/`，不覆盖 `public/demo/`：
 
 ```bash
-pnpm exec vite --host 127.0.0.1 --port 3001 --strictPort
-# http://127.0.0.1:3001/?demo=finance-fed
+pnpm prepare:authorized-media
 ```
-
-完成定义：默认脚本只监听回环地址，普通推荐流与财经 Demo 均通过，相关文档同步更新。
 
 ## 代码地图
 
-| 路径 | 职责 | 状态 |
-|---|---|---|
-| `src/components/slide/BaseVideo.vue` | 毫秒媒体时钟、扩展宿主挂载 | 已实现 |
-| `src/features/video-extensions/` | 通用视频扩展契约与宿主 | 已实现 |
-| `src/features/finance-cues/` | 财包触点、半屏、状态机、足迹与总结 | 前端 6 类渲染器均有单测；运行时 Demo/E2E 仍只绑定原 3 类 |
-| `src/mock/index.ts` | `?demo=finance-fed` 固定工程占位视频 | 仅 Demo |
-| `server/src/sources/` | 公开页合规探测、创作者 OAuth 元数据 | 已实现契约 |
-| `server/src/media/` | FFmpeg/FFprobe、指纹、音轨与关键帧 | 已实现；本机缺二进制 |
-| `server/src/providers/` | MiniMax/方舟 OpenAI-compatible、语义抽取/评审/修复、豆包 ASR、火山 OCR | 真实 HTTP 客户端，未做真实付费验证 |
-| `server/src/pipeline/` | 语义时间轴、有界修复、评分/Planner、方向规则、payload 成稿、CoverageReport | 已实现；fake client 验证 |
-| `server/src/jobs/` | 内存任务、DraftExperience 和 CoverageReport | 已实现；无持久化 |
-| `server/test/` | 默认离线的服务端测试 | 84 项基线 |
-| `e2e/finance-cues.spec.ts` | 半屏不停播、多视口、总结与隔离 | 6 项基线 |
+| 路径                                   | 职责                                               |
+| -------------------------------------- | -------------------------------------------------- |
+| `src/features/authorized-media/`       | catalog 校验、四 ID 白名单、推荐卡适配与空态       |
+| `src/mock/index.ts`                    | manifest-only 推荐与长视频推荐；未知评论为空       |
+| `src/components/slide/BaseVideo.vue`   | 真实媒体时钟、互动暂停/条件恢复、背景点击门禁      |
+| `src/features/video-extensions/`       | 扩展契约、宿主、类型化播放请求与幂等控制器         |
+| `src/features/finance-cues/`           | POI、半屏、六类交互、时间轴、学习足迹与四套内容    |
+| `server/src/media/authorized-media.ts` | manifest/来源/派生校验、准备器、catalog 与资产解析 |
+| `server/src/app.ts`                    | catalog、GET/HEAD、HTTP Range 与既有分析 API       |
+| `server/src/pipeline/`                 | ASR/OCR/语义、确定性 Planner、规则与 Draft 生成    |
 
-## 产品不变量
+## 本地运行
 
-- 财包在视频时间轴上多次轻量出现；半屏最高 48vh、无蒙层，交互期间不得自动暂停或静音。
-- 自动触点最多 6 个、最小间隔 45 秒、同时最多 1 个；忽略只记为“未观察”。
-- 作者头像不被财包替换；报告无总分、无虚假百分比、无买卖建议。
-- 匿名抖音主页失败必须显式返回，不绕过验证码、签名、登录或风控。
-- 没有 MediaAsset、处理权声明和 evidenceId 不得分析；模型只能生成 draft，不能直接 approved。
-- ASR 时间不得越过媒体时长；OCR 缺失/非法置信度不进入证据；冲突触点高优先级胜出。
-
-## TDD 与交付门禁
-
-先写失败用例，再做最小实现。默认测试不得联网或消耗额度。
+首次或源媒体变化后先准备浏览器媒体，再分别启动 API 与前端：
 
 ```bash
 pnpm install --frozen-lockfile
+pnpm prepare:authorized-media
+pnpm start:api:minimax
+pnpm dev
+```
+
+- API 默认 `127.0.0.1:18787`，Vite 默认 `127.0.0.1:3000` 并代理 `/api/finance`。
+- 可用 `VITE_FINANCE_API_BASE_URL` 指向独立 API；不配置时使用同源路径。
+- `.env.minimax` / `.env.doubao` 只存本地密钥；只能记录变量名和位置，禁止输出值。
+- 准备授权媒体不调用模型；创建分析任务可能产生费用，须另行确认素材权利与费用。
+
+## TDD 与交付门禁
+
+默认测试必须离线、不得消耗模型额度：
+
+```bash
 pnpm test
 pnpm type-check
 pnpm type-check:server
@@ -73,33 +93,12 @@ git diff --check
 git status --short
 ```
 
-当前已验证基线：20 个前端 Vitest、84 个服务端 Vitest、6 个 Playwright E2E；两套类型检查、
-生产构建和 `pnpm audit --prod` 通过。真实 Provider、真实授权视频和人工审核不在该基线内。
-
-## 环境与运行边界
-
-- `.env.minimax` 当前已有本地语义模型与 ASR 配置；不得输出值，真实调用前按父交接文档执行轮换。
-- `.env.doubao` 尚未完成方舟配置；OCR 与抖音 OAuth 尚未配置。
-- `LIVE_PROVIDER_TESTS` 只有配置解析，没有 live suite；设为 `true` 也不会自动验证供应商。
-- 本机已有 `/bin/ffmpeg` 与 `/bin/ffprobe`，但没有用可入库的授权真实视频跑过付费 Provider 全链路，不要把媒体流水线写成“已验证”。
-- Docker 路径已按用户要求暂停，当前镜像未验证。原 Compose 会展开 env，原 build context 也未排除
-  `.env*`、媒体和分析产物；在单独完成安全加固前不要运行或宣传 Docker 路径。
-- 健康检查不产生模型费用；创建真实分析任务可能调用 ASR/模型，必须先获得用户对素材权利和费用的确认。
-
-## 后续队列
-
-1. 修复默认开发监听边界。
-2. 建立默认跳过、默认不联网的 live-provider preflight/smoke harness。
-3. 获得一条 10–30 秒有处理权视频后，执行 ASR→OCR→语义→draft dry run。
-4. 建人工审核与 ApprovedExperience 发布门禁。
-5. 前端切为 ApprovedExperience API-first + 明确 Demo fallback。
-6. 将新 3 类触点绑定运行时 fixture，补 E2E/视觉回归后再扩 server `RENDERABLE_KINDS`。
-7. 再补 Session/Event/Summary API 与看后深挖。
+专项至少覆盖：manifest 路径穿越/重复 ID/过期/缺失/指纹与时长错误，Range/HEAD，
+推荐空态，自动触点间隔与单实例约束，邀请继续播放、点击暂停、条件恢复、幂等与媒体属性不变。
 
 ## 禁止事项
 
-- 不 push `upstream`，不创建远端或 PR，除非用户明确授权。
-- 不提交 `.env*`、Cookie、token、模型原始响应、用户媒体、音轨、关键帧或 `.analysis-work/`。
-- 不把公开可见等同于有权下载/再处理，不接收浏览器 Cookie 做采集。
-- 不运行未脱敏的 `docker compose config`；它会展开 `env_file`。
-- 不把静态 fixture、占位时间码、HTTP 客户端存在写成真实供应商或真实内容已验证。
+- 不提交 `.env*`、token、Cookie、`media-import/`、`.analysis-work/`、`public/demo/` 大视频或模型产物。
+- 不把公开可见等同于有权下载/处理，不绕过登录、验证码、签名或风控。
+- 不把 `internal_poc`、估算时间码、静态 fixture 或 HTTP 客户端存在写成生产审核/真实模型验证。
+- 不恢复“互动不停播”、自动触点独立数量上限、旧推荐池 fallback 或用财包替换作者头像的旧口径。
