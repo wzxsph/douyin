@@ -35,6 +35,42 @@ function selectCausal(option: string) {
     feedback: props.trigger.payload.feedback
   })
 }
+
+function selectJudgment(optionId: string) {
+  if (props.trigger.kind !== 'quick_judgment') return
+  const option = props.trigger.payload.options.find((candidate) => candidate.id === optionId)
+  if (!option) return
+  emit('complete', {
+    response: option.label + '：' + option.result,
+    feedback: props.trigger.payload.feedback
+  })
+}
+
+function skipJudgment() {
+  if (props.trigger.kind !== 'quick_judgment') return
+  emit('complete', {
+    response: '暂时不确定',
+    feedback: props.trigger.payload.feedback
+  })
+}
+
+function selectFlip(optionId: string) {
+  if (props.trigger.kind !== 'counterexample_flip') return
+  const option = props.trigger.payload.options.find((candidate) => candidate.id === optionId)
+  if (!option) return
+  emit('complete', {
+    response: option.label + '：' + option.result,
+    feedback: props.trigger.payload.feedback
+  })
+}
+
+function completeCompare() {
+  if (props.trigger.kind !== 'concept_compare') return
+  emit('complete', {
+    response: props.trigger.payload.left.term + ' vs ' + props.trigger.payload.right.term,
+    feedback: props.trigger.payload.keyDistinction
+  })
+}
 </script>
 
 <template>
@@ -66,7 +102,7 @@ function selectCausal(option: string) {
       </div>
     </template>
 
-    <template v-else>
+    <template v-else-if="trigger.kind === 'causal_stitch'">
       <div class="causal-path">
         <span>{{ trigger.payload.before }}</span>
         <i>→</i>
@@ -84,6 +120,61 @@ function selectCausal(option: string) {
           {{ option }}
         </button>
       </div>
+    </template>
+
+    <template v-else-if="trigger.kind === 'quick_judgment'">
+      <p class="lead">先凭直觉判断，不确定也没关系。</p>
+      <div class="key-point">
+        <small>快速判断</small>
+        <b>{{ trigger.payload.title }}</b>
+      </div>
+      <div class="option-list">
+        <button
+          v-for="option in trigger.payload.options"
+          :key="option.id"
+          type="button"
+          @click.stop="selectJudgment(option.id)"
+        >
+          {{ option.label }}
+        </button>
+        <button class="soft" type="button" @click.stop="skipJudgment">不确定</button>
+      </div>
+    </template>
+
+    <template v-else-if="trigger.kind === 'counterexample_flip'">
+      <p class="lead">换个条件，看看主导路径会不会变。</p>
+      <div class="key-point">
+        <small>换个条件看看</small>
+        <b>{{ trigger.payload.baseClaim }}</b>
+      </div>
+      <div class="option-list">
+        <button
+          v-for="option in trigger.payload.options"
+          :key="option.id"
+          type="button"
+          @click.stop="selectFlip(option.id)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+    </template>
+
+    <template v-else-if="trigger.kind === 'concept_compare'">
+      <div class="compare-grid">
+        <div class="compare-side">
+          <small>{{ trigger.payload.left.term }}</small>
+          <p>{{ trigger.payload.left.description }}</p>
+        </div>
+        <div class="compare-side">
+          <small>{{ trigger.payload.right.term }}</small>
+          <p>{{ trigger.payload.right.description }}</p>
+        </div>
+      </div>
+      <div class="key-point">
+        <small>关键区别</small>
+        <b>{{ trigger.payload.keyDistinction }}</b>
+      </div>
+      <button class="primary" type="button" @click.stop="completeCompare">我能区分了</button>
     </template>
   </div>
 </template>
@@ -201,6 +292,40 @@ function selectCausal(option: string) {
     border: 1px solid #d9cfbb;
     font-size: 13px;
     text-align: left;
+  }
+
+  button.soft {
+    color: #6b6559;
+    background: #f3eee2;
+    border-style: dashed;
+  }
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.compare-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: #efe9dc;
+  border-radius: 12px;
+
+  small {
+    color: #7e5f18;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+    color: #3b3932;
+    font-size: 12px;
+    line-height: 1.5;
   }
 }
 </style>

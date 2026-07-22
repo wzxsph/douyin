@@ -59,10 +59,69 @@ const causalStitchTriggerSchema = z.object({
   })
 })
 
+const quickJudgmentTriggerSchema = z.object({
+  ...triggerBase,
+  kind: z.literal('quick_judgment'),
+  payload: z.object({
+    title: z.string().min(1),
+    options: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+          result: z.string().min(1).max(80)
+        })
+      )
+      .min(2)
+      .max(4),
+    feedback: z.string().min(1).max(80)
+  })
+})
+
+const counterexampleFlipTriggerSchema = z.object({
+  ...triggerBase,
+  kind: z.literal('counterexample_flip'),
+  payload: z.object({
+    title: z.string().min(1),
+    baseClaim: z.string().min(1),
+    options: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+          result: z.string().min(1).max(80)
+        })
+      )
+      .min(2)
+      .max(3),
+    feedback: z.string().min(1).max(80)
+  })
+})
+
+const conceptCompareTriggerSchema = z.object({
+  ...triggerBase,
+  kind: z.literal('concept_compare'),
+  payload: z.object({
+    title: z.string().min(1),
+    left: z.object({
+      term: z.string().min(1),
+      description: z.string().min(1).max(60)
+    }),
+    right: z.object({
+      term: z.string().min(1),
+      description: z.string().min(1).max(60)
+    }),
+    keyDistinction: z.string().min(1).max(80)
+  })
+})
+
 export const timelineTriggerSchema = z.discriminatedUnion('kind', [
   contextCardTriggerSchema,
   conditionSliderTriggerSchema,
-  causalStitchTriggerSchema
+  causalStitchTriggerSchema,
+  quickJudgmentTriggerSchema,
+  counterexampleFlipTriggerSchema,
+  conceptCompareTriggerSchema
 ])
 
 export const approvedExperienceSchema = z

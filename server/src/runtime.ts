@@ -4,7 +4,8 @@ import { analysisInputReadiness, loadRuntimeConfig, providerReadiness } from './
 import { AnalysisJobService } from './jobs/analysis-job-service.js'
 import { FfmpegMediaPreprocessor } from './media/ffmpeg.js'
 import { AnalysisPipeline } from './pipeline/analyze-video.js'
-import { ModelSemanticAnalyzer } from './providers/model-semantics.js'
+import { PayloadAuthor } from './pipeline/payload-author.js'
+import { SemanticGraphAnalyzer } from './providers/semantic-graph-analyzer.js'
 import { OpenAICompatibleStructuredClient } from './providers/openai-compatible.js'
 import { VolcengineFlashAsrClient } from './providers/volcengine-asr.js'
 import { DisabledOcrClient, VolcengineOcrClient } from './providers/volcengine-ocr.js'
@@ -24,18 +25,17 @@ export function buildRuntime() {
     config.analysisProvider === 'minimax'
       ? config.minimax.multimodalModel
       : config.ark.multimodalModel
-  const semantics = new ModelSemanticAnalyzer(
-    new OpenAICompatibleStructuredClient({
-      apiKey: selected.apiKey,
-      baseUrl: selected.baseUrl,
-      model:
-        configuredMultimodalModel ||
-        (config.analysisProvider === 'minimax' ? config.minimax.textModel : config.ark.model),
-      timeoutMs: selected.timeoutMs,
-      maxRetries: selected.maxRetries
-    }),
-    configuredMultimodalModel ? 8 : 0
-  )
+  const structuredClient = new OpenAICompatibleStructuredClient({
+    apiKey: selected.apiKey,
+    baseUrl: selected.baseUrl,
+    model:
+      configuredMultimodalModel ||
+      (config.analysisProvider === 'minimax' ? config.minimax.textModel : config.ark.model),
+    timeoutMs: selected.timeoutMs,
+    maxRetries: selected.maxRetries
+  })
+  const semantics = new SemanticGraphAnalyzer(structuredClient, configuredMultimodalModel ? 8 : 0)
+  const payloadAuthor = new PayloadAuthor(structuredClient)
   const asr = new VolcengineFlashAsrClient({
     endpoint: config.asr.endpoint,
     resourceId: config.asr.resourceId,
@@ -59,7 +59,7 @@ export function buildRuntime() {
         filterThreshold: config.ocr.filterThreshold
       })
     : new DisabledOcrClient()
-  const pipeline = new AnalysisPipeline({ media, asr, ocr, semantics })
+  const pipeline = new AnalysisPipeline({ media, asr, ocr, semantics, payloadAuthor })
   const jobs = new AnalysisJobService(pipeline)
   return {
     config,

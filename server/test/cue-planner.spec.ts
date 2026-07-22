@@ -5,17 +5,19 @@ import type { TriggerCandidate } from '../src/domain/contracts.js'
 function candidate(overrides: Partial<TriggerCandidate> = {}): TriggerCandidate {
   return {
     candidateId: 'cue-1',
+    sourceEventId: 'event-1',
     kind: 'context_card',
     proposedStartMs: 10_000,
     proposedEndMs: 16_000,
+    windowId: 'window-1',
     priority: 80,
     expectedInteractionMs: 8_000,
     prompt: '这里的政策利率指什么？',
     learningObjective: '区分政策利率和贷款利率',
     rationale: '口播首次引入核心概念',
     evidenceIds: ['e-1'],
-    confidence: 0.9,
     visualLoad: 'low',
+    subSignals: { learningValue: 0.8, timeSensitivity: 0.5, interactionFit: 0.7 },
     ...overrides
   }
 }
@@ -79,5 +81,14 @@ describe('deterministic cue planner', () => {
         { candidateId: 'same-priority-later', reason: 'MIN_GAP_VIOLATION' }
       ])
     )
+  })
+
+  it('plans a candidate regardless of its cue kind', () => {
+    const result = planCueCandidates([
+      candidate({ candidateId: 'flip', kind: 'counterexample_flip' })
+    ])
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual(['flip'])
+    expect(result.rejected).toEqual([])
   })
 })

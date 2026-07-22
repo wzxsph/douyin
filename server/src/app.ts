@@ -145,6 +145,28 @@ export function createApp(dependencies: AppDependencies) {
     }
   })
 
+  app.get('/api/finance/v1/analysis/jobs/:jobId/coverage', (request, response, next) => {
+    try {
+      if (!dependencies.jobs) {
+        throw new AppError('ANALYSIS_SERVICE_UNAVAILABLE', 'Analysis job service is unavailable', {
+          status: 503
+        })
+      }
+      const job = requireJob(dependencies.jobs.get(request.params.jobId), 'Analysis job')
+      if (job.status !== 'succeeded') {
+        throw new AppError('ANALYSIS_COVERAGE_NOT_READY', 'Analysis coverage report is not ready', {
+          status: 409,
+          details: { status: job.status }
+        })
+      }
+      response.json(
+        requireJob(dependencies.jobs.getCoverageReport(request.params.jobId), 'Coverage report')
+      )
+    } catch (error) {
+      next(error)
+    }
+  })
+
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
     const safe = publicError(error)
     response.status(safe.status).json(safe.body)

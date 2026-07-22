@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { DraftExperience, MediaAsset } from '../domain/contracts.js'
+import type { CoverageReport, DraftExperience, MediaAsset } from '../domain/contracts.js'
 import { AppError, asAppError } from '../domain/errors.js'
 import type { AnalysisPipeline } from '../pipeline/analyze-video.js'
 
@@ -16,6 +16,7 @@ export interface AnalysisJobRecord {
 export class AnalysisJobService {
   private readonly jobs = new Map<string, AnalysisJobRecord>()
   private readonly drafts = new Map<string, DraftExperience>()
+  private readonly coverageReports = new Map<string, CoverageReport>()
 
   constructor(private readonly pipeline: AnalysisPipeline) {}
 
@@ -42,6 +43,10 @@ export class AnalysisJobService {
     return this.drafts.get(jobId) ?? null
   }
 
+  getCoverageReport(jobId: string): CoverageReport | null {
+    return this.coverageReports.get(jobId) ?? null
+  }
+
   private async execute(jobId: string, input: { asset: MediaAsset; title: string }): Promise<void> {
     const current = this.jobs.get(jobId)
     if (!current) return
@@ -52,8 +57,9 @@ export class AnalysisJobService {
       updatedAt: new Date().toISOString()
     })
     try {
-      const draft = await this.pipeline.run({ jobId, ...input })
+      const { draft, coverageReport } = await this.pipeline.run({ jobId, ...input })
       this.drafts.set(jobId, draft)
+      this.coverageReports.set(jobId, coverageReport)
       const running = this.jobs.get(jobId)
       if (!running) return
       this.jobs.set(jobId, {

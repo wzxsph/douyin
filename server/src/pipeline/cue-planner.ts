@@ -1,13 +1,4 @@
-import type { TriggerCandidate } from '../domain/contracts.js'
-
-export type CueRejectionReason =
-  | 'EVIDENCE_REQUIRED'
-  | 'EVIDENCE_NOT_FOUND'
-  | 'MIN_GAP_VIOLATION'
-  | 'MAX_CUE_COUNT'
-  | 'HIGH_VISUAL_LOAD'
-  | 'UNSAFE_FINANCIAL_LANGUAGE'
-  | 'OUTSIDE_MEDIA_DURATION'
+import type { CueRejectionReason, TriggerCandidate } from '../domain/contracts.js'
 
 const unsafeFinancialLanguage =
   /(买入|卖出|加仓|减仓|仓位|目标价|稳赚|必涨|必跌|推荐.{0,6}(股票|基金|黄金|资产)|买什么)/i
