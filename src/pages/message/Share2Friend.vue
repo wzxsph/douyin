@@ -110,7 +110,7 @@
         </div>
         <div class="title">全部</div>
         <div :key="name" v-for="(value, name) of data.friendsSort">
-          <div :class="name === '#' ? 'top' : name" class="title">
+          <div :class="name.toString() === '#' ? 'top' : name.toString()" class="title">
             <span>{{ name }}</span>
           </div>
           <div class="local-row" :key="i" v-for="(item, i) of value" @click="toggleSelect(item)">
@@ -190,7 +190,7 @@ defineOptions({
 })
 
 const nav = useNav()
-const data = reactive({
+const data = reactive<any>({
   isCreateChat: false,
   searchKey: '',
   indexOffsetTop: {},
@@ -208,14 +208,14 @@ const data = reactive({
 
 onMounted(() => {
   getFriends()
-  let indexs = document.querySelectorAll('.index')
+  let indexs = document.querySelectorAll<HTMLElement>('.index')
   indexs.forEach((v) => {
-    data.indexOffsetTop[v.children[0].innerText] = v.offsetTop
+    data.indexOffsetTop[(v.children[0] as HTMLElement).innerText] = v.offsetTop
   })
-  let items = document.querySelectorAll('.item')
-  let item = document.querySelector(`.item:nth-child(2)`)
+  let items = document.querySelectorAll<HTMLElement>('.item')
+  let item = document.querySelector<HTMLElement>(`.item:nth-child(2)`)
   let itemHeight = item.clientHeight
-  let ul = document.querySelector('.indicator')
+  let ul = document.querySelector<HTMLElement>('.indicator')
   let ulOffsetTop = ul.offsetTop
   let resetColor = 'rgb(143, 143, 158)'
   ul.addEventListener('touchstart', (e) => {
@@ -337,15 +337,16 @@ async function getFriends() {
 
 const list = ref()
 
-function goto(el) {
+function goto(el: HTMLElement) {
   let py
   if (el.dataset['index']) {
     py = 'top'
   } else {
     py = el.innerText
   }
-  if (document.querySelector(`.${py}`)) {
-    list.value.scrollTop = document.querySelector(`.${py}`).offsetTop - 100
+  const target = document.querySelector<HTMLElement>(`.${py}`)
+  if (target) {
+    list.value.scrollTop = target.offsetTop - 100
   }
 }
 

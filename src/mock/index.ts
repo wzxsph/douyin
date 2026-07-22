@@ -21,6 +21,35 @@ let allRecommendVideos = posts6.map((v: any) => {
   return v
 })
 
+function injectFinanceDemoFromQuery() {
+  if (new URLSearchParams(window.location.search).get('demo') !== 'finance-fed') return
+  const source = allRecommendVideos.find(
+    (item: any) => String(item.aweme_id) === '6826943630775831812'
+  )
+  if (!source) return
+
+  const demo = cloneDeep(source) as any
+  demo.aweme_id = 'finance-fed-demo'
+  demo.financeExperienceId = 'finance-fed-v1'
+  demo.desc = '美联储降息如何影响股票、黄金和汇率｜工程媒体占位，待项目组替换真实视频、字幕与时间码'
+  demo.video = {
+    ...demo.video,
+    duration: 150_000,
+    loop: false,
+    play_addr: {
+      ...demo.video.play_addr,
+      url_list: ['./demo/finance-media-placeholder.webm']
+    }
+  }
+  demo.duration = 150_000
+  demo.type = 'recommend-video'
+
+  allRecommendVideos = [
+    demo,
+    ...allRecommendVideos.filter((item: any) => String(item.aweme_id) !== demo.aweme_id)
+  ]
+}
+
 // console.log('allRecommendVideos', allRecommendVideos)
 // eslint-disable-next-line
 const t = [
@@ -133,6 +162,7 @@ async function fetchData() {
 
 //TODO 有个bug，一开始只返回了6条数据，但第二次前端传过来的pageNo是2了，就是会从第10条数据开始返回，导致中间漏了4条
 export async function startMock() {
+  injectFinanceDemoFromQuery()
   mock.onGet(/video\/recommended/).reply(async (config) => {
     const { start, pageSize } = config.params
     // console.log('allRecommendVideos', cloneDeep(allRecommendVideos.length), config.params)

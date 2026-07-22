@@ -31,7 +31,7 @@ import bus, { EVENT_KEY } from '@/utils/bus'
 import { Icon } from '@iconify/vue'
 import { useClick } from '@/utils/hooks/useClick'
 
-const isPlaying = inject<boolean>('isPlaying')
+const isPlaying = inject<any>('isPlaying')
 const isMuted = inject('isMuted')
 const item = inject<any>('item')
 const vClick = useClick()

@@ -1,30 +1,28 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps({
-  list: {
-    type: Array,
-    default() {
-      return []
-    }
-  }
-})
+const props = withDefaults(
+  defineProps<{
+    list?: any[]
+  }>(),
+  { list: () => [] }
+)
 
-const leftList = computed(() => {
-  return props.list.filter((v, index) => index % 2 === 0)
-})
-const rightList = computed(() => {
-  return props.list.filter((v, index) => index % 2 !== 0)
-})
+defineSlots<{
+  default(props: { item: any }): any
+}>()
+
+const leftList = computed(() => props.list.filter((_item, index) => index % 2 === 0))
+const rightList = computed(() => props.list.filter((_item, index) => index % 2 !== 0))
 </script>
 
 <template>
   <div class="waterfall">
     <div class="waterfall-row">
-      <slot :item="item" v-for="item in leftList"></slot>
+      <slot v-for="item in leftList" :item="item"></slot>
     </div>
     <div class="waterfall-row">
-      <slot :item="item" v-for="item in rightList"></slot>
+      <slot v-for="item in rightList" :item="item"></slot>
     </div>
   </div>
 </template>

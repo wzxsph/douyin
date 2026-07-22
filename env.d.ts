@@ -1,9 +1,9 @@
 /// <reference types="vite/client" />
 /// <reference types="unplugin-vue-macros/macros-global" />
 
-declare const LATEST_COMMIT_HASH: string
-
 declare global {
+  const LATEST_COMMIT_HASH: string
+
   interface Window {
     isMoved: boolean
     isMuted: boolean

@@ -51,7 +51,7 @@ defineOptions({
 })
 
 const router = useRouter()
-const data = reactive({
+const data = reactive<any>({
   friends: {
     all: {},
     recent: [],

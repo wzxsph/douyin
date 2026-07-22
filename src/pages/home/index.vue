@@ -243,7 +243,11 @@ import BaseMask from '@/components/BaseMask.vue'
 const nav = useNav()
 const baseStore = useBaseStore()
 const uploader = ref()
-const isMobile = ref(/Mobi|Android|iPhone/i.test(navigator.userAgent))
+const isMobile = ref(
+  /Mobi|Android|iPhone/i.test(navigator.userAgent) ||
+    window.innerWidth <= 480 ||
+    new URLSearchParams(window.location.search).has('demo')
+)
 
 const state = reactive({
   active: true,
@@ -294,42 +298,63 @@ function setCurrentItem(item) {
   // console.log('item', item)
 }
 
+function enterFullscreen() {
+  if (!state.active) return
+  state.fullScreen = true
+}
+
+function exitFullscreen() {
+  if (!state.active) return
+  state.fullScreen = false
+}
+
+function openComments() {
+  if (!state.active) return
+  bus.emit(EVENT_KEY.ENTER_FULLSCREEN)
+  state.commentVisible = true
+}
+
+function closeCommentsFromBus() {
+  if (!state.active) return
+  bus.emit(EVENT_KEY.EXIT_FULLSCREEN)
+  state.commentVisible = false
+}
+
+function showShare() {
+  if (!state.active) return
+  state.isSharing = true
+}
+
+function navigate({ path, query }) {
+  if (!state.active) return
+  nav(path, query)
+}
+
+function goUserInfo() {
+  if (!state.active) return
+  state.baseIndex = 2
+}
+
 onMounted(() => {
-  bus.on(EVENT_KEY.ENTER_FULLSCREEN, () => {
-    if (!state.active) return
-    state.fullScreen = true
-  })
-  bus.on(EVENT_KEY.EXIT_FULLSCREEN, () => {
-    if (!state.active) return
-    state.fullScreen = false
-  })
-  bus.on(EVENT_KEY.OPEN_COMMENTS, () => {
-    if (!state.active) return
-    bus.emit(EVENT_KEY.ENTER_FULLSCREEN)
-    state.commentVisible = true
-  })
-  bus.on(EVENT_KEY.CLOSE_COMMENTS, () => {
-    if (!state.active) return
-    bus.emit(EVENT_KEY.EXIT_FULLSCREEN)
-    state.commentVisible = false
-  })
-  bus.on(EVENT_KEY.SHOW_SHARE, () => {
-    if (!state.active) return
-    state.isSharing = true
-  })
-  bus.on(EVENT_KEY.NAV, ({ path, query }) => {
-    if (!state.active) return
-    nav(path, query)
-  })
-  bus.on(EVENT_KEY.GO_USERINFO, () => {
-    if (!state.active) return
-    state.baseIndex = 2
-  })
+  bus.on(EVENT_KEY.ENTER_FULLSCREEN, enterFullscreen)
+  bus.on(EVENT_KEY.EXIT_FULLSCREEN, exitFullscreen)
+  bus.on(EVENT_KEY.OPEN_COMMENTS, openComments)
+  bus.on(EVENT_KEY.CLOSE_COMMENTS, closeCommentsFromBus)
+  bus.on(EVENT_KEY.SHOW_SHARE, showShare)
+  bus.on(EVENT_KEY.NAV, navigate)
+  bus.on(EVENT_KEY.GO_USERINFO, goUserInfo)
   bus.on(EVENT_KEY.CURRENT_ITEM, setCurrentItem)
 })
 
 onUnmounted(() => {
-  bus.offAll()
+  bus.off(EVENT_KEY.ENTER_FULLSCREEN, enterFullscreen)
+  bus.off(EVENT_KEY.EXIT_FULLSCREEN, exitFullscreen)
+  bus.off(EVENT_KEY.OPEN_COMMENTS, openComments)
+  bus.off(EVENT_KEY.CLOSE_COMMENTS, closeCommentsFromBus)
+  bus.off(EVENT_KEY.SHOW_SHARE, showShare)
+  bus.off(EVENT_KEY.NAV, navigate)
+  bus.off(EVENT_KEY.GO_USERINFO, goUserInfo)
+  bus.off(EVENT_KEY.CURRENT_ITEM, setCurrentItem)
 })
 
 onActivated(() => {

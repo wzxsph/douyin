@@ -65,7 +65,7 @@ import FromBottomDialog from '../../components/dialog/FromBottomDialog.vue'
 import { useBaseStore } from '@/store/pinia'
 import { onMounted, reactive } from 'vue'
 import { useNav } from '@/utils/hooks/useNav'
-import { _checkImgUrl, _dateFormat, _notice, _sleep } from '@/utils'
+import { _checkImgUrl, _dateFormat, _no, _notice, _sleep } from '@/utils'
 
 defineOptions({
   name: 'RequestUpdate'
