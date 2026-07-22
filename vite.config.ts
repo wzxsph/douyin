@@ -4,10 +4,22 @@ import VueJsx from '@vitejs/plugin-vue-jsx'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { Plugin as importToCDN } from 'vite-plugin-cdn-import'
 import { fileURLToPath, URL } from 'node:url'
+import { rm } from 'node:fs/promises'
 import { getLastCommit } from 'git-last-commit'
 import VueMacros from 'unplugin-vue-macros/vite'
 
 const lifecycle = process.env.npm_lifecycle_event
+
+const excludeLocalDemoMediaFromBuild = (): PluginOption => ({
+  name: 'exclude-local-demo-media-from-build',
+  apply: 'build',
+  async closeBundle() {
+    await rm(fileURLToPath(new URL('./dist/demo', import.meta.url)), {
+      recursive: true,
+      force: true
+    })
+  }
+})
 
 export default defineConfig(({ mode }): Promise<UserConfig> => {
   let latestCommitHash = ''
@@ -21,6 +33,7 @@ export default defineConfig(({ mode }): Promise<UserConfig> => {
         base: './',
         envDir: 'env',
         plugins: [
+          excludeLocalDemoMediaFromBuild(),
           VueMacros({
             plugins: {
               vue: Vue(),

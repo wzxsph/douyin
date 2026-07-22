@@ -4,6 +4,7 @@
 .env.*
 .analysis-work/
 media-import/
+public/demo/
 server/
 Dockerfile
 docker-compose.analysis.yml

@@ -25,15 +25,19 @@ app.use(VueLazyload, {
 })
 app.use(pinia)
 app.use(router)
-app.mount('#app')
 app.directive('click', vClick)
 
-//放到最后才可以使用pinia
-startMock()
-setTimeout(() => {
-  bus.emit(EVENT_KEY.HIDE_MUTED_NOTICE)
-  window.showMutedNotice = false
-}, 2000)
-bus.on(EVENT_KEY.REMOVE_MUTED, () => {
-  window.isMuted = false
-})
+async function bootstrap() {
+  // Register the fail-closed authorized recommendation source before any page requests data.
+  await startMock()
+  app.mount('#app')
+  setTimeout(() => {
+    bus.emit(EVENT_KEY.HIDE_MUTED_NOTICE)
+    window.showMutedNotice = false
+  }, 2000)
+  bus.on(EVENT_KEY.REMOVE_MUTED, () => {
+    window.isMuted = false
+  })
+}
+
+void bootstrap()
