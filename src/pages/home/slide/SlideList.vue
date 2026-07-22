@@ -13,6 +13,14 @@
     @loadMore="loadMore"
     @refresh="() => getData(true)"
   />
+  <div
+    v-if="state.loaded && state.totalSize === 0"
+    class="authorized-feed-empty"
+    data-testid="authorized-feed-empty"
+  >
+    <b>暂无可用授权视频</b>
+    <span>{{ state.emptyMessage }}</span>
+  </div>
 </template>
 
 <script setup lang="jsx">
@@ -69,7 +77,9 @@ const state = reactive({
   index: props.index,
   list: props.list,
   totalSize: 0,
-  pageSize: 10
+  pageSize: 10,
+  loaded: false,
+  emptyMessage: ''
 })
 
 function loadMore() {
@@ -80,7 +90,7 @@ function loadMore() {
 }
 
 async function getData(refresh = false) {
-  if (!refresh && state.totalSize === state.list.length) return
+  if (state.loaded && !refresh && state.totalSize === state.list.length) return
   if (baseStore.loading) return
   baseStore.loading = true
   let res = await props.api({
@@ -91,11 +101,13 @@ async function getData(refresh = false) {
   baseStore.loading = false
   if (res.success) {
     state.totalSize = res.data.total
+    state.emptyMessage = res.data.emptyMessage || ''
     if (refresh) {
       state.list = []
     }
     state.list = state.list.concat(res.data.list)
   }
+  state.loaded = true
 }
 
 // function dislike() {
@@ -144,3 +156,31 @@ onUnmounted(() => {
   bus.off(EVENT_KEY.TOGGLE_CURRENT_VIDEO, togglePlay)
 })
 </script>
+
+<style scoped lang="less">
+.authorized-feed-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.72);
+  background: #000;
+  text-align: center;
+
+  b {
+    color: #ffd541;
+    font-size: 16px;
+  }
+
+  span {
+    max-width: 280px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+</style>

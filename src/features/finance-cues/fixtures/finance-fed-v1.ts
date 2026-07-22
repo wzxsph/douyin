@@ -7,15 +7,21 @@ const rawExperience = {
   experienceId: 'finance-fed-v1',
   videoId: 'finance-fed-demo',
   contentVersion: '2026.07.22.1',
-  mediaFingerprint: 'pending-authorized-finance-video',
+  mediaFingerprint: 'finance-real-venezuela',
   publishStatus: 'approved',
+  approvalScope: 'internal_poc',
+  approvalDecisionRef: 'user-chat-2026-07-23',
+  timecodeQuality: 'estimated_accepted',
   title: '美联储降息如何影响股票、黄金和汇率',
-  notice: '当前媒体为工程占位，触点结构已审核；发布前替换真实视频、字幕与时间码。',
+  notice: 'Real Venezuela finance commentary video loaded; 3 pre-approved cues active.',
   constraints: {
-    maxAutomaticCues: 6,
     minGapMs: 45000,
     maxConcurrent: 1,
-    keepPlayback: true
+    playbackPolicy: {
+      invitation: 'continue',
+      interaction: 'pause',
+      exit: 'restore_previous'
+    }
   },
   concepts: [
     {
@@ -49,6 +55,7 @@ const rawExperience = {
       evidenceIds: ['e-rate-context'],
       reviewStatus: 'approved',
       fallbackBehavior: 'collapse_to_timeline',
+      delivery: 'automatic',
       kind: 'context_card',
       payload: {
         title: '政策利率不是所有利率的开关',
@@ -71,6 +78,7 @@ const rawExperience = {
       evidenceIds: ['e-growth-condition'],
       reviewStatus: 'approved',
       fallbackBehavior: 'collapse_to_timeline',
+      delivery: 'automatic',
       kind: 'condition_slider',
       payload: {
         title: '把增长条件拨一下',
@@ -103,6 +111,7 @@ const rawExperience = {
       evidenceIds: ['e-financing-path'],
       reviewStatus: 'approved',
       fallbackBehavior: 'collapse_to_timeline',
+      delivery: 'automatic',
       kind: 'causal_stitch',
       payload: {
         title: '补全中间机制',

@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { TimelineTrigger } from '../contracts'
 import caibaoImage from '../assets/caibao.png'
 
-defineProps<{
+const props = defineProps<{
   trigger: TimelineTrigger
 }>()
 
@@ -10,23 +11,36 @@ defineEmits<{
   open: []
   dismiss: []
 }>()
+
+const accessibleLabel = computed(
+  () => `财包：${props.trigger.cueLabel}，${props.trigger.prompt}，打开互动`
+)
 </script>
 
 <template>
   <section
     class="cue-pill"
     data-testid="finance-cue-pill"
+    data-compact-height="44"
+    data-max-width="216"
     @pointerdown.stop
     @pointerup.stop
+    @pointercancel.stop
     @click.stop
   >
-    <button class="cue-main" type="button" @click.stop="$emit('open')">
+    <button
+      class="cue-main"
+      type="button"
+      :aria-label="accessibleLabel"
+      :title="trigger.cueLabel + '：' + trigger.prompt"
+      @click.stop="$emit('open')"
+    >
       <img :src="caibaoImage" alt="" />
-      <span>
-        <small>{{ trigger.cueLabel }}</small>
-        <b>{{ trigger.prompt }}</b>
+      <span class="cue-copy" aria-hidden="true">
+        <b>{{ trigger.cueLabel }}</b>
+        <i>·</i>
+        <span>{{ trigger.prompt }}</span>
       </span>
-      <em>打开</em>
     </button>
     <button class="later" type="button" aria-label="稍后再看" @click.stop="$emit('dismiss')">
       稍后
@@ -38,16 +52,18 @@ defineEmits<{
 .cue-pill {
   position: absolute;
   left: 14px;
-  bottom: 104px;
+  bottom: 190px;
   z-index: 14;
   display: flex;
-  width: min(330px, calc(100% - 92px));
-  min-height: 56px;
+  box-sizing: border-box;
+  width: min(216px, calc(100% - 92px));
+  // Feed cards use a small inherited scale; 45 CSS px keeps the rendered hit target >= 44 px.
+  height: 45px;
   overflow: hidden;
   color: #fff;
   background: rgba(23, 23, 21, 0.94);
   border: 1px solid rgba(255, 213, 65, 0.55);
-  border-radius: 18px;
+  border-radius: 22px;
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(14px);
   pointer-events: auto;
@@ -62,59 +78,62 @@ defineEmits<{
 }
 
 .cue-main {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
+  display: flex;
   flex: 1;
-  gap: 9px;
+  gap: 6px;
   align-items: center;
   min-width: 0;
-  min-height: 56px;
-  padding: 7px 8px;
+  min-height: 45px;
+  padding: 0 7px;
   text-align: left;
 
   img {
-    width: 38px;
-    height: 38px;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
     object-fit: cover;
-    border-radius: 12px;
+    border-radius: 8px;
     background: #ffd541;
+  }
+}
+
+.cue-copy {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 3px;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  b {
+    flex: 0 0 auto;
+    color: #ffd541;
+    font-weight: 700;
+  }
+
+  i {
+    flex: 0 0 auto;
+    color: rgba(255, 255, 255, 0.45);
+    font-style: normal;
   }
 
   span {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  small {
-    color: #ffd541;
-    font-size: 11px;
-    line-height: 1.1;
-  }
-
-  b {
     overflow: hidden;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.35;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  em {
-    color: #ffd541;
-    font-size: 12px;
-    font-style: normal;
   }
 }
 
 .later {
-  width: 48px;
-  min-height: 56px;
+  width: 45px;
+  min-width: 45px;
+  min-height: 45px;
   border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
   color: rgba(255, 255, 255, 0.68) !important;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 @keyframes cue-enter {

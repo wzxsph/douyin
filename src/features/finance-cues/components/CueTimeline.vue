@@ -54,7 +54,7 @@ function statusClass(triggerId: string): string {
 .cue-timeline {
   position: absolute;
   right: 7%;
-  bottom: 72px;
+  bottom: 12px;
   left: 7%;
   z-index: 16;
   height: 44px;

@@ -1,12 +1,20 @@
 import resource from '../assets/data/resource.js'
 import posts6 from '@/assets/data/posts6.json'
-import { _fetch, cloneDeep, random } from '@/utils'
+import { _fetch, cloneDeep } from '@/utils'
 import { BASE_URL, FILE_URL } from '@/config'
 import { useBaseStore } from '@/store/pinia'
 import { axiosInstance } from '@/utils/request'
 import MockAdapter from 'axios-mock-adapter'
+import {
+  AUTHORIZED_VIDEO_IDS,
+  buildAuthorizedRecommendationPage,
+  catalogEmptyMessage,
+  loadAuthorizedMediaCatalog,
+  toRecommendedVideo
+} from '@/features/authorized-media/catalog'
 
 const mock = new MockAdapter(axiosInstance)
+const authorizedVideoIds = new Set<string>(AUTHORIZED_VIDEO_IDS)
 
 function getPage2(params: any): { limit: number; offset: number; pageNo: number } {
   const offset = params.pageNo * params.pageSize
@@ -16,38 +24,14 @@ function getPage2(params: any): { limit: number; offset: number; pageNo: number 
 
 let allRecommendPosts = []
 let userVideos = []
-let allRecommendVideos = posts6.map((v: any) => {
-  v.type = 'recommend-video'
-  return v
-})
+let allRecommendVideos: any[] = []
+const legacyAccountVideos = posts6.map((video: any) => ({ ...video, type: 'recommend-video' }))
+let authorizedFeedEmptyMessage = '授权视频目录正在加载'
 
-function injectFinanceDemoFromQuery() {
-  if (new URLSearchParams(window.location.search).get('demo') !== 'finance-fed') return
-  const source = allRecommendVideos.find(
-    (item: any) => String(item.aweme_id) === '6826943630775831812'
-  )
-  if (!source) return
-
-  const demo = cloneDeep(source) as any
-  demo.aweme_id = 'finance-fed-demo'
-  demo.financeExperienceId = 'finance-fed-v1'
-  demo.desc = '美联储降息如何影响股票、黄金和汇率｜工程媒体占位，待项目组替换真实视频、字幕与时间码'
-  demo.video = {
-    ...demo.video,
-    duration: 150_000,
-    loop: false,
-    play_addr: {
-      ...demo.video.play_addr,
-      url_list: ['./demo/finance-media-placeholder.webm']
-    }
-  }
-  demo.duration = 150_000
-  demo.type = 'recommend-video'
-
-  allRecommendVideos = [
-    demo,
-    ...allRecommendVideos.filter((item: any) => String(item.aweme_id) !== demo.aweme_id)
-  ]
+async function initializeAuthorizedRecommendations() {
+  const result = await loadAuthorizedMediaCatalog()
+  allRecommendVideos = result.catalog.items.map(toRecommendedVideo)
+  authorizedFeedEmptyMessage = catalogEmptyMessage(result.catalog, result.error)
 }
 
 // console.log('allRecommendVideos', allRecommendVideos)
@@ -140,39 +124,21 @@ const t = [
 //   }
 // },
 
-async function fetchData() {
-  const baseStore = useBaseStore()
-  _fetch(BASE_URL + '/data/videos.md').then((r) => {
-    r.json().then(async (v) => {
-      let userList = cloneDeep(baseStore.users)
-      if (!userList.length) {
-        await baseStore.init()
-        userList = cloneDeep(baseStore.users)
-      }
-      v = v.map((w) => {
-        w.type = 'recommend-video'
-        const item: any = userList.find((a) => String(a.uid) === String(w.author_user_id))
-        if (item) w.author = item
-        return w
-      })
-      allRecommendVideos = allRecommendVideos.concat(v)
-    })
-  })
-}
-
 //TODO 有个bug，一开始只返回了6条数据，但第二次前端传过来的pageNo是2了，就是会从第10条数据开始返回，导致中间漏了4条
 export async function startMock() {
-  injectFinanceDemoFromQuery()
+  await initializeAuthorizedRecommendations()
   mock.onGet(/video\/recommended/).reply(async (config) => {
     const { start, pageSize } = config.params
     // console.log('allRecommendVideos', cloneDeep(allRecommendVideos.length), config.params)
     return [
       200,
       {
-        data: {
-          total: 844,
-          list: allRecommendVideos.slice(start, start + pageSize) // list: allRecommendVideos.slice(0, 6),
-        },
+        data: buildAuthorizedRecommendationPage(
+          allRecommendVideos,
+          start,
+          pageSize,
+          authorizedFeedEmptyMessage
+        ),
         code: 200,
         msg: ''
       }
@@ -183,10 +149,12 @@ export async function startMock() {
     return [
       200,
       {
-        data: {
-          total: 844,
-          list: allRecommendVideos.slice(page.offset, page.limit)
-        },
+        data: buildAuthorizedRecommendationPage(
+          allRecommendVideos,
+          page.offset,
+          page.limit - page.offset,
+          authorizedFeedEmptyMessage
+        ),
         code: 200,
         msg: ''
       }
@@ -212,16 +180,18 @@ export async function startMock() {
       '6882368275695586568',
       '7000587983069957383'
     ]
-    let id = config.params.id
-    if (!videoIds.includes(String(id))) {
-      id = videoIds[random(0, videoIds.length - 1)]
+    const id = String(config.params.id)
+    // The internal PoC has no authorized platform comments; never present generated mocks as real.
+    if (authorizedVideoIds.has(id)) return [200, { data: [], code: 200 }]
+    if (!videoIds.includes(id)) return [200, { data: [], code: 200 }]
+    try {
+      const r3 = await _fetch(`${FILE_URL}/comments/video_id_${id}.md`)
+      const v = await r3.json()
+      if (v) return [200, { data: v, code: 200 }]
+    } catch (_) {
+      // A known video may intentionally have no comments in this PoC.
     }
-    const r2 = await _fetch(`${FILE_URL}/comments/video_id_${id}.md`)
-    const v = await r2.json()
-    if (v) {
-      return [200, { data: v, code: 200 }]
-    }
-    return [200, { code: 500 }]
+    return [200, { data: [], code: 200 }]
   })
 
   mock.onGet(/video\/private/).reply(async (config) => {
@@ -231,7 +201,7 @@ export async function startMock() {
       {
         data: {
           total: 10,
-          list: allRecommendVideos.slice(100, 110).slice(page.offset, page.limit)
+          list: legacyAccountVideos.slice(100, 110).slice(page.offset, page.limit)
         },
         code: 200,
         msg: ''
@@ -246,7 +216,7 @@ export async function startMock() {
       {
         data: {
           total: 150,
-          list: allRecommendVideos.slice(200, 350).slice(page.offset, page.limit)
+          list: legacyAccountVideos.slice(200, 350).slice(page.offset, page.limit)
         },
         code: 200,
         msg: ''
@@ -294,7 +264,7 @@ export async function startMock() {
       {
         data: {
           total: 150,
-          list: allRecommendVideos.slice(200, 350).slice(page.offset, page.limit)
+          list: legacyAccountVideos.slice(200, 350).slice(page.offset, page.limit)
         },
         code: 200,
         msg: ''
@@ -309,7 +279,7 @@ export async function startMock() {
         data: {
           video: {
             total: 50,
-            list: allRecommendVideos.slice(350, 400)
+            list: legacyAccountVideos.slice(350, 400)
           },
           music: {
             total: resource.music.length,
@@ -403,6 +373,4 @@ export async function startMock() {
       }
     ]
   })
-
-  setTimeout(fetchData, 1000)
 }

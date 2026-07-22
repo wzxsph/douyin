@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import type { MediaClockState, VideoContext } from '@/features/video-extensions/contracts'
+import type {
+  InteractionExitReason,
+  MediaClockState,
+  PauseForInteractionRequest,
+  ReleaseInteractionRequest,
+  VideoContext
+} from '@/features/video-extensions/contracts'
 import type { ApprovedExperience, TimelineTrigger, TraceAction } from '../contracts'
 import { advanceCueOrchestrator } from '../orchestrator'
 import { experienceRepository } from '../repository'
@@ -21,6 +27,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'request-seek': [positionMs: number]
   'sheet-open-change': [open: boolean]
+  'pause-for-interaction': [request: PauseForInteractionRequest]
+  'release-interaction': [request: ReleaseInteractionRequest]
 }>()
 
 const store = useFinanceCueStore()
@@ -31,6 +39,8 @@ const feedback = ref('')
 const summaryOpen = ref(false)
 const previousTimeMs = ref(0)
 let cueTimer: ReturnType<typeof setTimeout> | null = null
+let interactionSequence = 0
+let playbackInteractionId: string | null = null
 
 const session = computed(() => {
   if (!experience.value) return null
@@ -50,18 +60,28 @@ const sheetOpen = computed(() => Boolean(expandedCue.value || summaryOpen.value)
 const hasTrace = computed(() => Boolean(session.value?.events.length))
 
 watch(
-  () => props.context.financeExperienceId,
-  async (experienceId) => {
+  () => [props.context.videoId, props.context.financeExperienceId] as const,
+  async ([videoId, experienceId]) => {
+    releasePlaybackInteraction('context-change', false)
     clearCueTimer()
     activeCue.value = null
     expandedCue.value = null
     summaryOpen.value = false
+    experience.value = null
     previousTimeMs.value = props.clock.currentTimeMs
-    if (!experienceId) {
-      experience.value = null
+    if (!experienceId) return
+    const loadedExperience = await experienceRepository.getExperience(experienceId)
+    if (props.context.videoId !== videoId || props.context.financeExperienceId !== experienceId) {
       return
     }
-    experience.value = await experienceRepository.getExperience(experienceId)
+    if (
+      !loadedExperience ||
+      loadedExperience.videoId !== videoId ||
+      loadedExperience.mediaFingerprint !== props.context.item?.mediaFingerprint
+    ) {
+      return
+    }
+    experience.value = loadedExperience
     if (experience.value) store.hydrate(experience.value)
   },
   { immediate: true }
@@ -77,7 +97,7 @@ watch(
     }
 
     const decision = advanceCueOrchestrator({
-      triggers: currentExperience.triggers,
+      triggers: currentExperience.triggers.filter((trigger) => trigger.delivery === 'automatic'),
       statuses: statuses.value,
       previousTimeMs: previousTimeMs.value,
       currentTimeMs,
@@ -99,6 +119,7 @@ watch(
       closeCue(false)
       expandedCue.value = null
       summaryOpen.value = true
+      ensurePlaybackPaused('summary')
     }
   }
 )
@@ -107,6 +128,7 @@ watch(sheetOpen, (open) => emit('sheet-open-change', open), { immediate: true })
 
 onBeforeUnmount(() => {
   clearCueTimer()
+  releasePlaybackInteraction('unmounted', false)
   emit('sheet-open-change', false)
 })
 
@@ -146,6 +168,7 @@ function openCue(trigger: TimelineTrigger) {
   clearCueTimer()
   activeCue.value = null
   feedback.value = ''
+  ensurePlaybackPaused(trigger.triggerId)
   expandedCue.value = trigger
   summaryOpen.value = false
   record(trigger, 'expanded')
@@ -158,10 +181,11 @@ function closeCue(recordDismissal = true) {
   if (trigger && recordDismissal) record(trigger, 'dismissed')
 }
 
-function closeSheet() {
+function closeSheet(reason: InteractionExitReason = feedback.value ? 'completed' : 'closed') {
   expandedCue.value = null
   summaryOpen.value = false
   feedback.value = ''
+  releasePlaybackInteraction(reason, true)
 }
 
 function complete(payload: { response: string; feedback: string }) {
@@ -169,6 +193,12 @@ function complete(payload: { response: string; feedback: string }) {
   if (!trigger) return
   record(trigger, 'completed', payload.response, trigger.evidenceIds)
   feedback.value = payload.feedback
+}
+
+function skipInteraction() {
+  const trigger = expandedCue.value
+  if (trigger) record(trigger, 'dismissed')
+  closeSheet('skipped')
 }
 
 function revisit(triggerId: string) {
@@ -182,8 +212,30 @@ function revisit(triggerId: string) {
 
 function openSummary() {
   closeCue(false)
+  ensurePlaybackPaused('summary')
   expandedCue.value = null
   summaryOpen.value = true
+}
+
+function ensurePlaybackPaused(sourceId: string) {
+  if (playbackInteractionId) return
+  playbackInteractionId = `${props.context.videoId}:${sourceId}:${++interactionSequence}`
+  emit('pause-for-interaction', {
+    type: 'pause-for-interaction',
+    interactionId: playbackInteractionId
+  })
+}
+
+function releasePlaybackInteraction(reason: InteractionExitReason, allowResume: boolean) {
+  if (!playbackInteractionId) return
+  const interactionId = playbackInteractionId
+  playbackInteractionId = null
+  emit('release-interaction', {
+    type: 'release-interaction',
+    interactionId,
+    reason,
+    allowResume
+  })
 }
 </script>
 
@@ -226,9 +278,19 @@ function openSummary() {
       <div v-if="feedback" class="feedback" data-testid="finance-feedback">
         <b>财包的反馈</b>
         <p>{{ feedback }}</p>
-        <button type="button" @click.stop="closeSheet">收好，继续看</button>
+        <button type="button" @click.stop="closeSheet()">收好，继续看</button>
       </div>
-      <InteractionRenderer v-else :trigger="expandedCue" @complete="complete" />
+      <div v-else class="interaction-task">
+        <InteractionRenderer :trigger="expandedCue" @complete="complete" />
+        <button
+          type="button"
+          class="skip-interaction"
+          data-testid="finance-skip-interaction"
+          @click.stop="skipInteraction"
+        >
+          跳过，继续看
+        </button>
+      </div>
     </CaibaoHalfSheet>
 
     <CaibaoHalfSheet
@@ -322,5 +384,21 @@ function openSummary() {
     font-weight: 700;
     cursor: pointer;
   }
+}
+
+.interaction-task {
+  display: grid;
+  gap: 10px;
+}
+
+.skip-interaction {
+  min-width: 44px;
+  min-height: 44px;
+  color: #6d6558;
+  background: transparent;
+  border: 1px solid #d7cebd;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>

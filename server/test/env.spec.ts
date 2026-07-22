@@ -16,6 +16,10 @@ describe('runtime config', () => {
     expect(config.ark.baseUrl).toBe('https://ark.cn-beijing.volces.com/api/v3')
     expect(config.minimax.multimodalModel).toBe('')
     expect(config.mediaImportRoot).toMatch(/media-import$/)
+    expect(config.authorizedDouyinManifest).toMatch(
+      /media-import\/authorized-douyin\/download-manifest\.json$/
+    )
+    expect(config.authorizedMediaRoot).toMatch(/\.analysis-work\/showcase-media$/)
   })
 
   it('reports mandatory ASR and optional OCR credentials independently', () => {

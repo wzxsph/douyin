@@ -94,10 +94,13 @@
       </template>
       <VideoExtensionHost
         v-if="!isLive && !state.commentVisible"
+        :key="`${extensionContext.videoId}:${state.extensionEpoch}`"
         :context="extensionContext"
         :clock="mediaClock"
         @request-seek="handleExtensionSeek"
         @sheet-open-change="state.extensionSheetOpen = $event"
+        @pause-for-interaction="handlePauseForInteraction"
+        @release-interaction="handleReleaseInteraction"
       />
     </div>
   </div>
@@ -110,11 +113,17 @@ import ItemToolbar from './ItemToolbar.vue'
 import ItemDesc from './ItemDesc.vue'
 import bus, { EVENT_KEY } from '../../utils/bus'
 import { SlideItemPlayStatus } from '@/utils/const_var'
-import { computed, onMounted, onUnmounted, provide, reactive } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUnmounted, provide, reactive, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { _css } from '@/utils/dom'
 import VideoExtensionHost from '@/features/video-extensions/VideoExtensionHost.vue'
-import type { MediaClockState, VideoContext } from '@/features/video-extensions/contracts'
+import type {
+  MediaClockState,
+  PauseForInteractionRequest,
+  ReleaseInteractionRequest,
+  VideoContext
+} from '@/features/video-extensions/contracts'
+import { createInteractionPlaybackController } from '@/features/video-extensions/interaction-playback'
 
 defineOptions({
   name: 'BaseVideo'
@@ -201,7 +210,8 @@ let state = reactive({
   },
   videoScreenHeight: 0,
   commentVisible: false,
-  extensionSheetOpen: false
+  extensionSheetOpen: false,
+  extensionEpoch: 0
 })
 const poster = $computed(() => {
   return _checkImgUrl(props.item.video.poster ?? props.item.video.cover.url_list[0])
@@ -221,6 +231,10 @@ const extensionContext = computed<VideoContext>(() => ({
   item: props.item,
   position: props.position
 }))
+const interactionPlayback = createInteractionPlaybackController(
+  () => videoEl,
+  () => extensionContext.value.videoId
+)
 const mediaClock = computed<MediaClockState>(() => ({
   currentTimeMs: state.currentTimeMs,
   durationMs: state.durationMs,
@@ -262,6 +276,10 @@ onMounted(() => {
   bus.on(EVENT_KEY.REMOVE_MUTED, removeMuted)
 })
 
+onBeforeUnmount(() => {
+  interactionPlayback.dispose()
+})
+
 onUnmounted(() => {
   // console.log('unmounted')
   bus.off(EVENT_KEY.SINGLE_CLICK_BROADCAST, click)
@@ -273,6 +291,20 @@ onUnmounted(() => {
   bus.off(EVENT_KEY.CLOSE_SUB_TYPE, onCloseSubType)
   bus.off(EVENT_KEY.REMOVE_MUTED, removeMuted)
 })
+
+watch(
+  () => [extensionContext.value.videoId, extensionContext.value.financeExperienceId] as const,
+  ([videoId, experienceId], previousContext) => {
+    if (
+      previousContext &&
+      (videoId !== previousContext[0] || experienceId !== previousContext[1])
+    ) {
+      interactionPlayback.cancel()
+      state.extensionSheetOpen = false
+      state.extensionEpoch += 1
+    }
+  }
+)
 
 function removeMuted() {
   state.isMuted = false
@@ -350,6 +382,15 @@ function handleExtensionSeek(positionMs: number) {
   syncMediaClock()
 }
 
+function handlePauseForInteraction(request: PauseForInteractionRequest) {
+  interactionPlayback.pauseForInteraction(request)
+  syncMediaClock()
+}
+
+function handleReleaseInteraction(request: ReleaseInteractionRequest) {
+  void interactionPlayback.releaseInteraction(request).finally(syncMediaClock)
+}
+
 function onOpenSubType() {
   state.commentVisible = true
 }
@@ -397,6 +438,7 @@ function onCloseComments() {
 function click({ uniqueId, index, type }) {
   if (props.position.uniqueId === uniqueId && props.position.index === index) {
     if (type === EVENT_KEY.ITEM_TOGGLE) {
+      if (state.extensionSheetOpen) return
       if (props.isLive) {
         pause()
         bus.emit(EVENT_KEY.NAV, {
@@ -412,12 +454,16 @@ function click({ uniqueId, index, type }) {
       }
     }
     if (type === EVENT_KEY.ITEM_STOP) {
+      interactionPlayback.cancel()
+      state.extensionSheetOpen = false
+      state.extensionEpoch += 1
       videoEl.currentTime = 0
       state.ignoreWaiting = true
       pause()
       setTimeout(() => (state.ignoreWaiting = false), 300)
     }
     if (type === EVENT_KEY.ITEM_PLAY) {
+      if (state.extensionSheetOpen) return
       videoEl.currentTime = 0
       state.ignoreWaiting = true
       play()

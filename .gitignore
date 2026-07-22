@@ -15,6 +15,7 @@ coverage
 test-results
 playwright-report
 *.local
+.vercel/
 
 # Server-only secrets and generated analysis artifacts.
 .env
@@ -24,6 +25,14 @@ playwright-report
 .analysis-work/
 media-import/*
 !media-import/.gitkeep
+public/demo/*.mp4
+public/demo/*.webm
+public/demo/*.jpg
+public/demo/*.jpeg
+public/demo/*.png
+src/assets/data/finance-author-xiaolin.json
+src/assets/data/finance-authorized-videos.json
+public/data/comments/finance-video_id_*.json
 
 /cypress/videos/
 /cypress/screenshots/
@@ -39,3 +48,4 @@ media-import/*
 *.sw?
 
 *.tsbuildinfo
+.vercel
