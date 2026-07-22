@@ -9,6 +9,10 @@ const rawSchema = z.object({
   ANALYSIS_PROVIDER: z.enum(['minimax', 'doubao']).default('minimax'),
   MEDIA_IMPORT_ROOT: z.string().default('./media-import'),
   ANALYSIS_WORK_ROOT: z.string().default('./.analysis-work'),
+  AUTHORIZED_DOUYIN_MANIFEST: z
+    .string()
+    .default('./media-import/authorized-douyin/download-manifest.json'),
+  AUTHORIZED_MEDIA_ROOT: z.string().default('./.analysis-work/authorized-media'),
   FFMPEG_PATH: z.string().default('ffmpeg'),
   FFPROBE_PATH: z.string().default('ffprobe'),
 
@@ -67,6 +71,8 @@ export interface RuntimeConfig {
   analysisProvider: 'minimax' | 'doubao'
   mediaImportRoot: string
   analysisWorkRoot: string
+  authorizedDouyinManifest: string
+  authorizedMediaRoot: string
   ffmpegPath: string
   ffprobePath: string
   minimax: {
@@ -123,6 +129,8 @@ export function loadRuntimeConfig(
     analysisProvider: raw.ANALYSIS_PROVIDER,
     mediaImportRoot: path.resolve(raw.MEDIA_IMPORT_ROOT),
     analysisWorkRoot: path.resolve(raw.ANALYSIS_WORK_ROOT),
+    authorizedDouyinManifest: path.resolve(raw.AUTHORIZED_DOUYIN_MANIFEST),
+    authorizedMediaRoot: path.resolve(raw.AUTHORIZED_MEDIA_ROOT),
     ffmpegPath: raw.FFMPEG_PATH,
     ffprobePath: raw.FFPROBE_PATH,
     minimax: {

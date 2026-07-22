@@ -26,6 +26,7 @@
     "start:api:minimax": "CAIBAO_ENV_FILE=.env.minimax tsx server/src/index.ts",
     "start:api:doubao": "CAIBAO_ENV_FILE=.env.doubao tsx server/src/index.ts",
     "probe:douyin": "tsx server/src/cli/probe-douyin.ts",
+    "prepare:authorized-media": "tsx server/src/cli/prepare-authorized-media.ts",
     "report": "vite build",
     "preview": "vite preview",
     "lint": "eslint  --fix  . --ext .vue,.js,.ts,.tsx,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",

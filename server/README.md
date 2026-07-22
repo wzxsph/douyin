@@ -29,6 +29,40 @@ curl http://127.0.0.1:18787/api/finance/v1/health
 
 健康检查分别报告语义模型、ASR/OCR 与 FFmpeg/FFprobe 配置，不返回密钥。授权媒体是创建任务时校验的前置条件，不属于健康检查。服务默认只监听 `127.0.0.1`；Docker Compose 虽在容器内监听所有接口，但宿主端口仍只发布到回环地址。
 
+## 授权推荐媒体
+
+推荐流的唯一媒体事实源是：
+
+```text
+media-import/authorized-douyin/download-manifest.json
+```
+
+首次使用前显式生成浏览器兼容的 H.264/AAC 派生文件和封面：
+
+```bash
+pnpm prepare:authorized-media
+```
+
+命令只写入 `.analysis-work/authorized-media/<batchId>/`，不会覆盖 `public/demo`，也不会覆盖同名
+批次。源文件、派生文件和 `.analysis-work` 均被 Git 忽略。清单、权利有效期、路径边界、bytes、
+SHA-256 或 FFprobe 任一校验失败时均 fail closed，不会回退到旧推荐视频。
+服务兼容当前 manifest schema v1/v2，但 catalog 仍只允许四个已有财经内容包映射的 videoId；
+v2 清单中的其他条目会记录为 `AUTHORIZED_MEDIA_EXPERIENCE_UNMAPPED`，不会进入推荐或媒体接口。
+
+只读接口：
+
+```text
+GET  /api/finance/v1/media/catalog
+GET  /api/finance/v1/media/:videoId/video
+HEAD /api/finance/v1/media/:videoId/video
+GET  /api/finance/v1/media/:videoId/poster
+HEAD /api/finance/v1/media/:videoId/poster
+```
+
+视频支持单段 HTTP Range。未知 ID 返回 404，已知但权利到期返回 410，非法 Range 返回 416；
+响应不会包含本机路径。运行时路径可用 `AUTHORIZED_DOUYIN_MANIFEST` 和
+`AUTHORIZED_MEDIA_ROOT` 覆盖，但仍受清单和实际文件的双重 allowlist 校验。
+
 ## 创建分析任务
 
 ```bash

@@ -2,6 +2,7 @@ import { config as loadDotEnv } from 'dotenv'
 import { createApp } from './app.js'
 import { analysisInputReadiness, loadRuntimeConfig, providerReadiness } from './config/env.js'
 import { AnalysisJobService } from './jobs/analysis-job-service.js'
+import { AuthorizedMediaService, FfprobeMediaProbe } from './media/authorized-media.js'
 import { FfmpegMediaPreprocessor } from './media/ffmpeg.js'
 import { AnalysisPipeline } from './pipeline/analyze-video.js'
 import { PayloadAuthor } from './pipeline/payload-author.js'
@@ -61,6 +62,11 @@ export function buildRuntime() {
     : new DisabledOcrClient()
   const pipeline = new AnalysisPipeline({ media, asr, ocr, semantics, payloadAuthor })
   const jobs = new AnalysisJobService(pipeline)
+  const authorizedMedia = new AuthorizedMediaService({
+    manifestPath: config.authorizedDouyinManifest,
+    preparedRoot: config.authorizedMediaRoot,
+    probe: new FfprobeMediaProbe(config.ffprobePath)
+  })
   return {
     config,
     app: createApp({
@@ -68,7 +74,8 @@ export function buildRuntime() {
       analysisInputReadiness: () => analysisInputReadiness(config),
       mediaReadiness: () => media.readiness(),
       profileProbe: new DouyinPublicProfileProbe(),
-      jobs
+      jobs,
+      authorizedMedia
     })
   }
 }
