@@ -74,6 +74,22 @@ export class AnalysisPipeline {
         jobId: input.jobId
       })
     )
+    const outOfBoundsSegments = transcript.segments.filter(
+      (segment) => segment.endMs > prepared.durationMs
+    )
+    if (outOfBoundsSegments.length) {
+      throw new AppError(
+        'ASR_TIMELINE_OUTSIDE_MEDIA',
+        'ASR segments must stay within the media duration',
+        {
+          status: 422,
+          details: {
+            mediaDurationMs: prepared.durationMs,
+            segmentCount: outOfBoundsSegments.length
+          }
+        }
+      )
+    }
     const ocr = (await this.dependencies.ocr.recognizeFrames(prepared.frames)).map((item) =>
       ocrEvidenceSchema.parse(item)
     )

@@ -54,4 +54,30 @@ describe('deterministic cue planner', () => {
     ]
     expect(planCueCandidates(input)).toEqual(planCueCandidates(input))
   })
+
+  it('keeps the higher-priority cue when candidates violate the minimum gap', () => {
+    const result = planCueCandidates([
+      candidate({ candidateId: 'earlier-lower', priority: 60, proposedStartMs: 10_000 }),
+      candidate({
+        candidateId: 'later-higher',
+        priority: 90,
+        proposedStartMs: 20_000,
+        proposedEndMs: 26_000
+      }),
+      candidate({
+        candidateId: 'same-priority-later',
+        priority: 90,
+        proposedStartMs: 30_000,
+        proposedEndMs: 36_000
+      })
+    ])
+
+    expect(result.accepted.map((item) => item.candidateId)).toEqual(['later-higher'])
+    expect(result.rejected).toEqual(
+      expect.arrayContaining([
+        { candidateId: 'earlier-lower', reason: 'MIN_GAP_VIOLATION' },
+        { candidateId: 'same-priority-later', reason: 'MIN_GAP_VIOLATION' }
+      ])
+    )
+  })
 })

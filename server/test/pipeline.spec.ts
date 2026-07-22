@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { AnalysisPipeline } from '../src/pipeline/analyze-video.js'
 
 describe('AnalysisPipeline', () => {
@@ -100,5 +100,50 @@ describe('AnalysisPipeline', () => {
         title: 'no rights'
       })
     ).rejects.toMatchObject({ code: 'MEDIA_RIGHTS_NOT_ATTESTED' })
+  })
+
+  it('rejects ASR evidence that extends beyond the media duration', async () => {
+    const recognizeFrames = vi.fn(async () => [])
+    const pipeline = new AnalysisPipeline({
+      media: {
+        prepare: async () => ({
+          durationMs: 1_000,
+          fingerprint: 'sha256:test',
+          audio: { path: '/work/audio.wav', format: 'wav' },
+          frames: []
+        })
+      },
+      asr: {
+        transcribePreparedAudio: async () => ({
+          fullText: '越界字幕',
+          segments: [
+            {
+              evidenceId: 'asr-outside',
+              startMs: 900,
+              endMs: 1_200,
+              text: '越界字幕'
+            }
+          ]
+        })
+      },
+      ocr: { recognizeFrames },
+      semantics: { analyze: vi.fn() }
+    })
+
+    await expect(
+      pipeline.run({
+        jobId: 'job-outside',
+        asset: {
+          assetId: 'asset-outside',
+          source: 'user_upload',
+          localPath: '/safe/media/video.mp4',
+          mimeType: 'video/mp4',
+          rightsAttested: true,
+          rightsAttestationId: 'attestation-outside'
+        },
+        title: '越界时间测试'
+      })
+    ).rejects.toMatchObject({ code: 'ASR_TIMELINE_OUTSIDE_MEDIA' })
+    expect(recognizeFrames).not.toHaveBeenCalled()
   })
 })

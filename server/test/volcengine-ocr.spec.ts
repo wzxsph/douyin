@@ -45,4 +45,20 @@ describe('VolcengineOcrClient', () => {
     expect(evidence).toHaveLength(1)
     expect(evidence[0]).toMatchObject({ text: '政策利率', timeMs: 8_000, confidence: 0.98 })
   })
+
+  it('rejects OCR text whose provider confidence is missing', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'caibao-ocr-'))
+    tempDirectories.push(directory)
+    const framePath = path.join(directory, 'frame.jpg')
+    await writeFile(framePath, Buffer.from('test-frame'))
+    const client = new VolcengineOcrClient({
+      accessKeyId: 'test-ak',
+      secretAccessKey: 'test-sk',
+      invoke: async () => ({ Result: { line_texts: ['没有置信度'] } })
+    })
+
+    await expect(
+      client.recognizeFrames([{ frameId: 'frame-000002', path: framePath, timeMs: 16_000 }])
+    ).resolves.toEqual([])
+  })
 })

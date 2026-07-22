@@ -50,12 +50,18 @@ export function planCueCandidates(
         candidate.proposedEndMs > options.durationMs)
     )
       reason = 'OUTSIDE_MEDIA_DURATION'
-    else if (accepted.length >= maxAutomaticCues) reason = 'MAX_CUE_COUNT'
     else if (
       accepted.length &&
       candidate.proposedStartMs - accepted[accepted.length - 1].proposedStartMs < minGapMs
-    )
-      reason = 'MIN_GAP_VIOLATION'
+    ) {
+      const previous = accepted[accepted.length - 1]
+      if (candidate.priority > previous.priority) {
+        accepted.pop()
+        rejected.push({ candidateId: previous.candidateId, reason: 'MIN_GAP_VIOLATION' })
+      } else {
+        reason = 'MIN_GAP_VIOLATION'
+      }
+    } else if (accepted.length >= maxAutomaticCues) reason = 'MAX_CUE_COUNT'
 
     if (reason) rejected.push({ candidateId: candidate.candidateId, reason })
     else accepted.push(candidate)

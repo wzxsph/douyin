@@ -165,7 +165,7 @@ export default defineConfig(({ mode }): Promise<UserConfig> => {
         server: {
           port: 3000,
           open: true,
-          host: '0.0.0.0',
+          host: '127.0.0.1',
           proxy: {
             '/api/finance': {
               target: 'http://127.0.0.1:18787',

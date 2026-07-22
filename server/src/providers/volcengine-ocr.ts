@@ -134,7 +134,10 @@ export class VolcengineOcrClient {
       const normalized = normalizeResult(response)
       normalized.texts.forEach((rawText, index) => {
         const text = String(rawText).trim()
-        const rawProbability = Number(normalized.probabilities[index] ?? 100)
+        const probability = normalized.probabilities[index]
+        if (probability === undefined || probability === null) return
+        const rawProbability = Number(probability)
+        if (!Number.isFinite(rawProbability)) return
         const confidence = rawProbability > 1 ? rawProbability / 100 : rawProbability
         if (!text || confidence * 100 < this.threshold) return
         const id = createHash('sha256')
