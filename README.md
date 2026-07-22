@@ -1,6 +1,10 @@
 <h1 align="center">
-  Douyin-Vue
+  财经推演室 · 财包 / Caibao
 </h1>
+
+<p align="center">
+  <em>把一条财经短视频，变成它自己时间轴上的语义交互层</em>
+</p>
 
 <p align="center">
  <a href="docs/README.en.md">English</a> | <a href="docs/README.es.md">Spanish</a> | <a href="docs/README.de.md">German</a> | 
@@ -8,129 +12,147 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/zyronon/douyin/blob/master/LICENSE"><img src="https://img.shields.io/github/license/zyronon/douyin" alt="License"></a>
-  <a><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"/></a>
-  <a><img src="https://img.shields.io/badge/Powered%20by-Vue-blue"/></a>
-  <a href="https://hellogithub.com/repository/f22d2c9ea1eb4826839084332f7519bd" target="_blank"><img src="https://abroad.hellogithub.com/v1/widgets/recommend.svg?rid=f22d2c9ea1eb4826839084332f7519bd&claim_uid=k5e4ZAqRjJEGzCW&theme=small" alt="Featured｜HelloGitHub" /></a>
-</p> 
+  <img src="https://img.shields.io/badge/status-工程原型%20engineering%20prototype-orange" alt="engineering prototype" />
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/zyronon/douyin" alt="License: GPL-3.0"></a>
+  <img src="https://img.shields.io/badge/base-Vue3%20%2B%20Vite-blue" alt="Vue3 + Vite" />
+</p>
 
-<div align=center>
-<a href="https://trendshift.io/repositories/9068" target="_blank" class="trendshift-badge"><img src="https://trendshift.io/api/badge/repositories/9068" alt="Douyin | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
-
-`douyin-vue` 是一个模仿 `抖音|TikTok` 的移动端短视频项目。`Vue` 在移动端的"最佳实践"，媲美原生 `App` 丝滑流畅的使用体验。使用了最新的 `Vue` 技术栈，基于 [`Vue3`](https://cn.vuejs.org/)、[`Vite5`](https://cn.vitejs.dev/)
-、[`Pinia`](https://pinia.vuejs.org/)实现。数据保存在项目本地，通过 [`axios-mock-adapter`](https://github.com/ctimmerm/axios-mock-adapter) 库拦截Api 并返回本地json数据，模拟真实后端请求
-
-
-<div>
-<img width="150px" src='docs/imgs/1.gif' />
-<img width="150px" src='docs/imgs/2.gif' />
-<img width="150px" src='docs/imgs/3.gif' />
-<img width="150px" src='docs/imgs/4.gif' />
-<img width="150px" src='docs/imgs/5.gif' />
-</div>
-
-## 本 Fork：财包（Caibao）财经内容分析能力
-
-本 fork 在原版短视频模拟器基础上新增了 **财包**——面向财经类短视频的 AI 陪伴分析能力：
-识别视频时间轴上的关键概念/因果节点，以轻量半屏卡片做知识解释，不遮挡原视频、不暂停播放、
-不提供买卖建议。相关改动在 `feat/caibao-analysis-pipeline` 分支。
-
-- 体验入口：`/?demo=finance-fed`
-- 使用范围与内容边界：见 [`NOTICE-FINANCE-DEMO.md`](NOTICE-FINANCE-DEMO.md)
-- 产品设计与架构文档：见产品仓 [wzxsph/caibao](https://github.com/wzxsph/caibao)
-
-以下为原 `douyin-vue` 模拟器说明，功能与协议保持不变。
-
-## 在线访问
- 
-Github Pages: [https://dy.typewords.cc/](https://dy.typewords.cc/)  
-
-[//]: # (Gitee pages: [https://dy.ttentau.top/]&#40;https://dy.ttentau.top/&#41; &#40;中国地区推荐访问这个地址&#41;  )
-[//]: # (Github pages: [https://zyronon.github.io/douyin/]&#40;https://zyronon.github.io/douyin/&#41;  )
-[//]: # (Netlify: [https://douyins.netlify.app/]&#40;https://douyins.netlify.app/&#41;)
-[//]: # (Vercel:  [https://douyins.vercel.app]&#40;https://douyins.vercel.app&#41;)
-[//]: # (Android Apk: https://github.com/zyronon/douyin/releases)
-[//]: # (**注意**：`PC` 必须将浏览器切到手机模式，先按 `F12` 调出控制台，再按 `Ctrl+Shift+M`才能正常预览)
-[//]: # (**注意**：手机请用  [Via 浏览器]&#40;https://viayoo.com/zh-cn/&#41;  或 Chrome 浏览器预览。其它浏览器可能会强制将视频全屏，导致无法正常显示)
-
-## 链接
-
-【模仿抖音系列】一：[200行代码实现类似Swiper.js的轮播组件](https://juejin.cn/post/7360512664317018146)  
-【模仿抖音系列】二：[实现抖音 “视频无限滑动“效果](https://juejin.cn/post/7361614921519054883)  
-【模仿抖音系列】三：[Vue 路由使用介绍以及添加转场动画](https://juejin.cn/post/7362528152777130025)  
-【模仿抖音系列】四：[Vue 有条件路由缓存，就像传统新闻网站一样](https://juejin.cn/post/7365334891473240101)  
-【模仿抖音系列】五：[Github Actions 部署 Pages、同步到 Gitee、翻译 README 、 打包 docker 镜像](https://juejin.cn/post/7365757742381957161)  
-【模仿抖音系列】六：[使用rem、动态vh自适应移动端](https://juejin.cn/post/7374452765273538595)
-
-## 运行
-注意：本项目仅适用于学习和研究，不得用于商业使用
-
-### 快速部署至 Vercel
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/zyronon/douyin)
-
-### 部署到 Docker
-```bash
-# pull Docker image
-docker pull ghcr.io/zyronon/douyin-vue:latest
-
-# start container, nginx reverse proxy custom port, for example: docker run -d -p 80:80 ghcr.io/zyronon/douyin-vue:latest
-docker run -d -p 80:80 ghcr.io/zyronon/douyin-vue:latest
-```
-### 本地开发
-**注意：必须 git 命令 clone 下来才能运行，下载 zip 包是无法运行的。如果 clone 速度太慢，推荐使用 gitee 地址**
-
-```bash
-git clone https://gitee.com/zyronon/douyin.git (中国使用)
-          https://github.com/zyronon/douyin.git 
-cd douyin
-npm install
-npm run dev
-```
-
-打开浏览器并访问: [http://127.0.0.1:3000](http://127.0.0.1:3000)
-
-**注意：需要将浏览器切至手机模式，先按 `F12` 调出控制台，再按 `Ctrl+Shift+M` 才能正常预览**
-
-## 数据来源
-
-视频来源于以下抖音网红
-
-- `我是香秀 🐂🍺`: [https://v.douyin.com/iYRAPA2L/](https://v.douyin.com/iYRAPA2L/)
-- `杨老虎 🐯（磕穿下巴掉牙版）`: [https://v.douyin.com/iYRA56de/](https://v.douyin.com/iYRA56de/)
-- `条子`: [https://v.douyin.com/iYRAaqjr/](https://v.douyin.com/iYRAaqjr/)
-- `达莎 Digi`：[https://v.douyin.com/iYRA6rwT/](https://v.douyin.com/iYRA6rwT/)
-- `小橙子`: [https://v.douyin.com/iYRAnudw/](https://v.douyin.com/iYRAnudw/)
-- `南恬`: [https://v.douyin.com/iYRAbKm3/](https://v.douyin.com/iYRAbKm3/)
-- `小霸宠牛排 🥩`：[https://v.douyin.com/iYRSosVB/](https://v.douyin.com/iYRSosVB/)
-- `奶茶妹 ◕🌱`: [https://v.douyin.com/iYRACKhP/](https://v.douyin.com/iYRACKhP/)
-- `我才是岚岚`: [https://v.douyin.com/iYRAQM1C/](https://v.douyin.com/iYRAQM1C/)
-- `周憬艺 ziran`: [https://v.douyin.com/iYRAQs4h/](https://v.douyin.com/iYRAQs4h/)
-- `刘思瑶 nice`: [https://v.douyin.com/iYRAaERn/](https://v.douyin.com/iYRAaERn/)
-- `彭十六 elf`: [https://v.douyin.com/iYRAHrVG/](https://v.douyin.com/iYRAHrVG/)
-- `李子柒`: [https://v.douyin.com/iYRA5B88/](https://v.douyin.com/iYRA5B88/)
-
-图片来自于小红书公开笔记
-
-以上内容均是互联网公开信息
-
-
-## 功能与建议
-
-目前项目处于开发初期，新功能正在持续添加中，如果你对软件有任何功能与建议，欢迎在 `Issues` 中提出
-如果你也喜欢本软件的设计思想，欢迎提交 `PR`，非常感谢你对我们的支持！
-
-## 联系我
-
-您可以联系我的邮箱 <a href="mailto:zyronon@163.com">zyronon@163.com</a>
-> 分享我其他开源项目：
+> **财包（Caibao）** 是视频里的一只引导小狗。视频照常播放，财包在**已审核的关键时间点**浮出少量、可忽略的「知识触点」；点开是一个**不打断播放**的半屏微交互；视频看完，沉淀成一条**过程式学习轨迹**。
 >
->_[**Typing Word
-** - 可在网页上使用的背单词软件~](https://github.com/zyronon/typing-word) <img src="https://img.shields.io/github/stars/zyronon/typing-word.svg?style=flat-square&label=Star&color=4285dd&logo=github" height="16px" />_  
-> _[**Web Scripts
-** - 一些好用的油猴脚本~](https://github.com/zyronon/web-scripts) <img src="https://img.shields.io/github/stars/zyronon/web-scripts.svg?style=flat-square&label=Star&color=4285dd&logo=github" height="16px" />_
+> 它**不是**课程、**不是**聊天机器人、**不做**涨跌预测、**不给**买卖建议——只解释概念、条件与因果机制。产品名为「财经推演室」。
 
-## 许可协议
+> [!WARNING]
+> 本仓库当前是**工程原型**，存在明确的发布阻塞项（见文末[「当前状态」](#当前状态工程原型)）。下文**核心能力**中的手机配图是**目标设计稿（target state）**，**不是当前已上线形态**；唯一反映当前真实运行状态的是下面这张演示截图。
 
-[GPL](LICENSE)
+## 一眼看懂（当前实现）
+
+打开 `http://127.0.0.1:3001/?demo=finance-fed` 看到的工程原型：财包在推荐流里，用一条**合成占位视频**验证「时间轴触点 + 半屏解释 + 连续播放」的机制。
+
+<p align="center">
+  <img width="300" src="docs/caibao/hero-current-demo.png" alt="财包财经演示（当前实现）" />
+</p>
+
+<details>
+<summary>与底座模拟器对照（before / after，均为真实截图）</summary>
+
+<p align="center">
+  <img width="280" src="docs/caibao/base-simulator.png" alt="上游 douyin-vue 底座（无财包）" />
+  &nbsp;&nbsp;
+  <img width="280" src="docs/caibao/hero-current-demo.png" alt="叠加财包后" />
+</p>
+
+左：上游 douyin-vue 底座模拟器；右：叠加财包知识触点后。
+
+</details>
+
+## 核心能力
+
+> [!NOTE]
+> 以下每条能力附的手机图均为**目标设计稿**，用于说明交互意图；当前已实现的代码见括注文件，行为约束由 `src/features/finance-cues/contracts.ts` 的 Zod schema 强制。
+
+**1 · 视频里的知识触点（触点胶囊）** — `components/CuePill.vue`
+
+在已审核的关键时间点浮出 4–6 秒的轻量胶囊：财包头像 + 类型标签 + 一句钩子 + 「打开 / 稍后」。它**使用财包头像，从不替换作者头像**；点击胶囊或其控件不会触发底座播放器的「点按暂停」。
+
+<p align="center"><img width="760" src="docs/caibao/target-01-touchpoints.png" alt="实时知识触点（目标设计稿）" /></p>
+
+**2 · 无遮罩半屏卡** — `components/CaibaoHalfSheet.vue`
+
+点开后只展开半屏（最高 48vh），**无全屏蒙层、不暂停、不静音、不缩放视频**，播放全程持续。可下拉、点关闭或「稍后看」收起。
+
+<p align="center"><img width="760" src="docs/caibao/target-02-half-sheet.png" alt="无遮罩半屏卡（目标设计稿）" /></p>
+
+**3 · 轻量微交互模板** — `components/InteractionRenderer.vue`
+
+每个触点只完成一个小认知动作：**背景补丁**（`context_card`，补一个前置概念）、**条件拨片**（`condition_slider`，改一个变量看两种结果）、**路径拼接**（`causal_stitch`，补一条缺失的因果边）。
+
+> PRD 规划了 6 类模板；**当前 `InteractionRenderer.vue` 已渲染的是上述三种**（`context_card` / `condition_slider` / `causal_stitch`）。
+
+**4 · 路径拼接微交互** — 把复杂沙盘拆成观看中的一个小动作
+
+用户不离开视频、也不一次配置多个变量；当前时间点只比较两条竞争路径，完整沙盘留到视频结束后自愿复盘。用户只回答「哪条路径更强 / 缺哪个条件」，**不回答资产该不该买**。
+
+<p align="center"><img width="760" src="docs/caibao/target-04-path-splice.png" alt="路径拼接微交互（目标设计稿）" /></p>
+
+**5 · 过程式学习总结（无评分）** — `components/LearningSummaryView.vue`
+
+视频结束给一份总结，只呈现「你已经碰到」与「尚未观察」，并支持从时间轴回到对应触点。**没有总分、没有百分比、没有排名、没有买卖建议**；未点击的内容标记为「尚未观察」，绝不写成「未掌握」，也不扣分。
+
+<p align="center"><img width="760" src="docs/caibao/target-05-learning-trace.png" alt="过程式学习轨迹（目标设计稿）" /></p>
+
+**6 · 确定性触点编排器** — `orchestrator.ts`
+
+跟随毫秒级媒体时钟，**同一时刻最多浮出 1 个触点**（就近触发，优先级破平）；若半屏已打开，后到触点只记为 `missed`，不叠弹窗、不排队。忽略只记为「未观察」，不是惩罚。
+
+上述行为不是口头约定，而由 schema 强制：`maxAutomaticCues ≤ 6`、`minGapMs ≥ 45000`（≥45 秒）、`maxConcurrent = 1`、`keepPlayback = true`、`cueDurationMs 4000–6000`、`halfSheetMaxRatio ≤ 0.48`，且每个触点必须 `reviewStatus: 'approved'` 并至少引用 1 个 `evidenceId`。
+
+## 工作原理
+
+<p align="center"><img width="900" src="docs/caibao/architecture.png" alt="系统架构：离线生产 + 实时运行" /></p>
+
+- **离线生产链路**：先理解整条视频（ASR / OCR / 多模态），把少量高价值节点规划为触点，**100% 人工审核**后生成版本化的语义时间轴与触点计划。
+- **实时运行链路**：客户端只消费**已审核**的计划；Agent 只负责编排曝光，**不在现场决定财经结论**。
+
+后端（Node + Express + TypeScript，绑定 `127.0.0.1:18787`）要点：
+
+- **证据门禁**：必须有已声明处理权的 `MediaAsset` 才分析；每条语义项（概念 / 主张 / 因果边 / 条件）都要引用来自 ASR/OCR 的 `evidenceId`；ASR 时间不得越过媒体时长。
+- **模型只出候选**：流水线输出恒为 `draft`（`publishStatus: 'draft'`、`approvedTriggers: []`、`blockers: ['HUMAN_REVIEW_REQUIRED']`），健康检查对外声明 `modelCanPublish: false`。人工审核是硬门禁。
+- **确定性 cue-planner**：带 `UNSAFE_FINANCIAL_LANGUAGE` 正则，拦截买入/卖出/仓位/目标价/稳赚/必涨等措辞。
+- **Provider**：MiniMax / 方舟语义、火山豆包 ASR、火山 OCR（SigV4，**默认关闭**）；抖音公开主页**合规探测** + 创作者 OAuth **仅元数据**客户端（不下载媒体、不绕过登录/验证码/签名/风控）。
+
+> 后端细节见 [`server/README.md`](server/README.md)。
+> 说明：**当前前端仍读静态 fixture `finance-fed-v1`（`src/features/finance-cues/fixtures/`），尚未接入 server API。**
+
+## 技术栈
+
+- **底座**：Vue 3 + Vite + Pinia + TypeScript（上游 `douyin-vue`，本地 `axios-mock-adapter` 提供 mock 数据，无真实后端）。
+- **财包前端**：`src/features/video-extensions/`（通用视频扩展宿主 / 契约 / 注册表）+ `src/features/finance-cues/`（Zod 契约、Pinia + `localStorage` 会话存储、确定性 orchestrator、5 个 Vue 组件、静态 fixture）。
+- **财包后端**：`server/src/`（Express + Zod + dotenv + fetch 版 HTTPS provider 客户端 + `child_process` FFmpeg 适配 + 原生 Volcengine 签名 V4）。
+- **测试**：前端 Vitest、服务端 Vitest（默认离线）、Playwright 多视口 E2E。
+
+## 本地运行
+
+```bash
+git clone https://github.com/wzxsph/douyin.git
+cd douyin
+git checkout feat/caibao-analysis-pipeline
+pnpm install
+
+# 只监听回环地址启动前端（工程原型启动方式）
+pnpm exec vite --host 127.0.0.1 --port 3001 --strictPort
+```
+
+打开财包演示：`http://127.0.0.1:3001/?demo=finance-fed`
+
+> 手机模式预览：`F12` 调出控制台，再按 `Ctrl+Shift+M`。
+>
+> 请勿使用 `pnpm dev / start / serve`——这些脚本会用 `vite --host` 覆盖回环配置、可能监听 `0.0.0.0`。
+
+可选后端（默认离线，健康检查不产生模型费用）：见 [`server/README.md`](server/README.md)；创建真实分析任务可能调用 ASR / 模型，须先确认素材权利与费用。
+
+## 当前状态：工程原型
+
+存在明确的发布阻塞项，请勿当作可交付的成品：
+
+- 模型输出永远是**候选**，须**人工审核**才能上线；尚无人工审核台 / 发布 API / 数据库（任务仅内存态）。
+- **尚未做任何真实计费的端到端跑通**（本机无 FFmpeg/FFprobe、无授权真实视频，Provider 未经真实成本/延迟/质量验证）。
+- 前端仍用静态 fixture，未接 server API；6 类交互模板**只实现 3 类**；OCR 默认关闭。
+- 底座依上游为 **GPL + 非商业**，本 fork **不作为商业产品**呈现。
+
+## 范围与边界（红线）
+
+- **不提供买卖建议**，不给仓位、目标价、收益承诺；只解释概念、条件与因果机制。
+- **证据门禁**：无 `MediaAsset`、无处理权声明、无 `evidenceId` 不分析。
+- **不做用户画像**：不保存原始语音，不推断用户财富状况、风险偏好或投资能力。
+- **播放永不被打断**：半屏 ≤ 48vh、无蒙层，不暂停、不静音、不倒带、不缩放视频。
+- **演示用合成占位视频**（`./demo/finance-media-placeholder.webm`）；对外发布前必须替换为**已授权视频、最终字幕、真实时间码与审核后的 evidenceId**。
+- **来源合规**：公开可见 ≠ 有权下载或再处理；不绕过登录、验证码、签名或风控。
+
+> 完整内容边界与演示说明见 [`NOTICE-FINANCE-DEMO.md`](NOTICE-FINANCE-DEMO.md)。
+
+## 致谢与许可
+
+- 本项目基于 [zyronon/douyin](https://github.com/zyronon/douyin)（`douyin-vue`，一个模仿抖音 / TikTok 的移动端短视频模拟器）二次开发，感谢原作者。
+- 财包能力为在此基础上的新增，位于 `src/features/`（`video-extensions` 与 `finance-cues`）与 `server/`，改动在 `feat/caibao-analysis-pipeline` 分支。
+- 遵循 [GPL-3.0](LICENSE)（继承上游）；上游底座仅供学习研究、不得商用，本 fork 沿用同一约束。
+- 产品设计与架构文档（PRD 等）：产品仓 [wzxsph/caibao](https://github.com/wzxsph/caibao)。
