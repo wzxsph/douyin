@@ -14,7 +14,7 @@ git log -5 --oneline
 git remote -v
 ```
 
-- 当前线上基线：`master@e85de2bfa1743aaea5204f6e1513de6d56c2e310`；同域媒体修复在 `fix/pages-same-origin-media`。
+- 当前线上基线：`master@9b5bd02503c951a8b416e66bdd81f48ba89931d5`；有声引导修复在 `fix/sound-onboarding`。
 - `origin=https://github.com/wzxsph/douyin.git`；`upstream` 只是公共底座。
 - 未获用户当次明确授权，不 push、不 force-push、不创建 PR，也不向 `upstream` 写入。
 - 工作树可能包含用户或其他 Agent 的未提交媒体/fixture；禁止 reset、checkout 覆盖或代提交。
@@ -23,10 +23,11 @@ git remote -v
 
 - 关键点先出现“财包 POI 微入口”：约 44px 高、最大 216px、4–6 秒自动收起，可从时间轴重访。
 - 邀请出现时继续播放；用户点击进入互动时暂停；关闭、完成或跳过时，仅在进入前正在播放且上下文未变时恢复。
+- 首次进入遵守浏览器策略，以静音状态尝试自动播放，并提供显式“点击开启声音”入口。点击视频、播放键或声音入口必须在同一用户手势内解除静音并播放；选择写入站点本地偏好。播放被浏览器拒绝时必须显示可重试入口，不得静默无响应。
 - 半屏最高 48vh、无蒙层；作者头像与财包严格分离。打开半屏后屏蔽视频背景单击播放。
 - 自动触点不设独立数量上限，但间隔至少 45 秒、同时最多 1 个；当前 Mock 的六类语义模板自然产生最多 6 个节点，不得恢复“最多 4 个”的截断。
   `delivery: timeline_only` 的节点不得自动弹出，但可主动重访。
-- 播放控制不得写 `currentTime`、`muted`、`volume` 或 `playbackRate`；时间轴主动回访是唯一允许的显式 seek。
+- 财包互动的 pause/release 不得写 `currentTime`、`muted`、`volume` 或 `playbackRate`；用户显式声音操作可以修改 `muted`。时间轴主动回访是唯一允许的显式 seek。
 - 报告无总分、百分比、财富画像和投资建议；未互动只写“尚未观察”。
 
 ## 授权媒体单一事实源
@@ -94,7 +95,7 @@ git status --short
 ```
 
 专项至少覆盖：manifest 路径穿越/重复 ID/过期/缺失/指纹与时长错误，Range/HEAD，
-推荐空态，10 条公开子集、同域 `video/mp4`/Range、自动触点间隔与单实例约束，邀请继续播放、点击暂停、条件恢复、幂等与媒体属性不变。
+推荐空态，10 条公开子集、同域 `video/mp4`/Range、首次有声入口与偏好保持、自动播放拒绝的可重试状态、自动触点间隔与单实例约束，邀请继续播放、点击暂停、条件恢复、幂等与互动期间媒体属性不变。
 
 ## 禁止事项
 

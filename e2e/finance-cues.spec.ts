@@ -228,6 +228,22 @@ for (const viewport of viewports) {
   })
 }
 
+test('首次进入提供显式有声播放入口并记住用户选择', async ({ page }) => {
+  const { player, video } = await openShowcase(page)
+  const soundPrompt = player.getByTestId('showcase-sound-prompt')
+
+  await expect(soundPrompt).toBeVisible()
+  expect(await video.evaluate((node: HTMLVideoElement) => node.muted)).toBe(true)
+
+  await soundPrompt.click()
+  await expect.poll(() => video.evaluate((node: HTMLVideoElement) => node.muted)).toBe(false)
+  await expect.poll(() => video.evaluate((node: HTMLVideoElement) => node.paused)).toBe(false)
+  await expect(soundPrompt).toBeHidden()
+  expect(await page.evaluate(() => localStorage.getItem('caibao-showcase-sound-enabled'))).toBe(
+    'true'
+  )
+})
+
 test('进入前已暂停，关闭后保持暂停且不改变位置', async ({ page }) => {
   const { video } = await openShowcase(page)
   await surfaceFirstCue(page)

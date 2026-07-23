@@ -15,6 +15,7 @@ import {
   showcasePosterUrl,
   type ShowcaseCatalogItem
 } from '@/showcase/catalog'
+import { setShowcaseSoundEnabled, showcaseSoundEnabled } from '@/showcase/sound-preference'
 
 const props = defineProps<{
   item: ShowcaseCatalogItem
@@ -25,6 +26,7 @@ const props = defineProps<{
 const videoEl = ref<HTMLVideoElement>()
 const sheetOpen = ref(false)
 const loadError = ref(false)
+const playbackBlocked = ref(false)
 const clock = ref<MediaClockState>({
   currentTimeMs: 0,
   durationMs: props.item.durationMs,
@@ -62,15 +64,18 @@ watch(
     const media = videoEl.value
     if (!media) return
     if (active) {
-      media.muted = true
+      media.muted = !showcaseSoundEnabled.value
+      playbackBlocked.value = false
       try {
         await media.play()
       } catch {
-        syncClock()
+        playbackBlocked.value = true
       }
     } else {
       media.pause()
+      playbackBlocked.value = false
     }
+    syncClock()
   },
   { immediate: true }
 )
@@ -95,14 +100,47 @@ function togglePlayback() {
   if (sheetOpen.value) return
   const media = videoEl.value
   if (!media) return
-  if (media.paused) void media.play()
-  else media.pause()
+  if (media.paused || media.muted) {
+    void enableSoundAndPlay()
+    return
+  }
+  media.pause()
+}
+
+async function enableSoundAndPlay() {
+  const media = videoEl.value
+  if (!media) return
+  setShowcaseSoundEnabled(true)
+  media.muted = false
+  playbackBlocked.value = false
+  try {
+    await media.play()
+  } catch {
+    playbackBlocked.value = true
+  } finally {
+    syncClock()
+  }
 }
 
 function toggleMuted() {
   const media = videoEl.value
   if (!media) return
-  media.muted = !media.muted
+  if (media.muted) {
+    void enableSoundAndPlay()
+    return
+  }
+  setShowcaseSoundEnabled(false)
+  media.muted = true
+  syncClock()
+}
+
+function handlePlaying() {
+  playbackBlocked.value = false
+  syncClock()
+}
+
+function handleLoadedMetadata() {
+  loadError.value = false
   syncClock()
 }
 
@@ -144,10 +182,10 @@ function formatTime(milliseconds: number) {
       webkit-playsinline
       muted
       @click="togglePlayback"
-      @loadedmetadata="syncClock"
+      @loadedmetadata="handleLoadedMetadata"
       @durationchange="syncClock"
       @timeupdate="syncClock"
-      @play="syncClock"
+      @play="handlePlaying"
       @pause="syncClock"
       @seeking="syncClock"
       @seeked="syncClock"
@@ -167,6 +205,18 @@ function formatTime(milliseconds: number) {
       <span class="brand">财包 · 推荐</span>
       <span class="mock-chip">LLM Mock</span>
     </header>
+
+    <button
+      v-if="active && !sheetOpen && !loadError && (clock.muted || playbackBlocked)"
+      type="button"
+      class="sound-prompt"
+      data-testid="showcase-sound-prompt"
+      :aria-label="playbackBlocked ? '点击有声播放' : '点击开启声音'"
+      @click.stop="enableSoundAndPlay"
+    >
+      <span aria-hidden="true">🔊</span>
+      {{ playbackBlocked ? '点击有声播放' : '点击开启声音' }}
+    </button>
 
     <div class="author-rail">
       <RouterLink
@@ -207,7 +257,7 @@ function formatTime(milliseconds: number) {
       type="button"
       class="play-button"
       aria-label="播放视频"
-      @click.stop="togglePlayback"
+      @click.stop="enableSoundAndPlay"
     >
       ▶
     </button>
@@ -270,6 +320,7 @@ function formatTime(milliseconds: number) {
 .author-rail,
 .video-copy,
 .play-button,
+.sound-prompt,
 .clock-label,
 .media-error {
   position: absolute;
@@ -299,6 +350,26 @@ function formatTime(milliseconds: number) {
   border-radius: 999px;
   font-size: 10px;
   font-weight: 800;
+}
+
+.sound-prompt {
+  top: max(60px, calc(env(safe-area-inset-top) + 46px));
+  left: 50%;
+  display: inline-flex;
+  min-height: 44px;
+  max-width: 216px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 15px;
+  color: #28200d;
+  background: rgba(255, 213, 65, 0.96);
+  border: 1px solid rgba(255, 249, 220, 0.9);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .author-rail {
