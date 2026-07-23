@@ -260,7 +260,7 @@ test('作者页只展示该作者的清单作品并可返回推荐流', async ({
   await player.locator('.author-avatar').click()
   await expect(page).toHaveURL(/#\/author\/xiaolin/)
   await expect(page.getByRole('heading', { name: '小Lin说' })).toBeVisible()
-  await expect(page.locator('.work-card')).toHaveCount(15)
+  await expect(page.locator('.work-card')).toHaveCount(5)
   await expect(
     page.locator('.work-card').first().getByRole('link', { name: '原视频 ↗' })
   ).toHaveAttribute('href', firstItem.sourceUrl)

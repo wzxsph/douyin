@@ -3,21 +3,25 @@ import Vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { rm } from 'node:fs/promises'
 
-const excludeLocalDemoMediaFromBuild = (): PluginOption => ({
-  name: 'exclude-local-demo-media-from-build',
+const excludeLegacyPublicAssetsFromBuild = (): PluginOption => ({
+  name: 'exclude-legacy-public-assets-from-build',
   apply: 'build',
   async closeBundle() {
-    await rm(fileURLToPath(new URL('./dist/demo', import.meta.url)), {
-      recursive: true,
-      force: true
-    })
+    await Promise.all(
+      ['demo', 'data', 'images', 'libarchive.wasm'].map((relativePath) =>
+        rm(fileURLToPath(new URL(`./dist/${relativePath}`, import.meta.url)), {
+          recursive: true,
+          force: true
+        })
+      )
+    )
   }
 })
 
 export default defineConfig({
   base: './',
   envDir: 'env',
-  plugins: [excludeLocalDemoMediaFromBuild(), Vue()],
+  plugins: [excludeLegacyPublicAssetsFromBuild(), Vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
