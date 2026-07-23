@@ -4,6 +4,7 @@ import {
   type ApprovedExperience
 } from '@/features/finance-cues/contracts'
 import rawBundle from './generated/showcase-bundle.json'
+import rawPublicCatalog from './public-video-ids.json'
 
 const catalogItemSchema = z.object({
   videoId: z.string().min(1),
@@ -83,7 +84,55 @@ const showcaseBundleSchema = z
     }
   })
 
-export const showcaseBundle = showcaseBundleSchema.parse(rawBundle)
+const generatedShowcaseBundle = showcaseBundleSchema.parse(rawBundle)
+const publicCatalogConfig = z
+  .object({
+    schemaVersion: z.literal(1),
+    selection: z.string().min(1),
+    videoIds: z.array(z.string().min(1)).length(10)
+  })
+  .superRefine((config, context) => {
+    if (new Set(config.videoIds).size !== config.videoIds.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Public showcase video ids must be unique',
+        path: ['videoIds']
+      })
+    }
+  })
+  .parse(rawPublicCatalog)
+
+const generatedCatalogByVideoId = new Map(
+  generatedShowcaseBundle.catalog.map((item) => [item.videoId, item])
+)
+const publicCatalog = publicCatalogConfig.videoIds.map((videoId) => {
+  const item = generatedCatalogByVideoId.get(videoId)
+  if (!item)
+    throw new Error(`Public showcase video is missing from the generated bundle: ${videoId}`)
+  return item
+})
+const publicExperienceIds = new Set(publicCatalog.map((item) => item.financeExperienceId))
+const publicExperiences = generatedShowcaseBundle.experiences.filter((experience) =>
+  publicExperienceIds.has(experience.experienceId)
+)
+if (publicExperiences.length !== publicCatalog.length) {
+  throw new Error('Every public showcase video must map to exactly one generated experience')
+}
+
+const publicAuthors = generatedShowcaseBundle.authors
+  .map((author) => ({
+    ...author,
+    itemCount: publicCatalog.filter((item) => item.authorSlug === author.slug).length
+  }))
+  .filter((author) => author.itemCount > 0)
+
+export const publicShowcaseVideoIds = Object.freeze([...publicCatalogConfig.videoIds])
+export const showcaseBundle = Object.freeze({
+  ...generatedShowcaseBundle,
+  authors: publicAuthors,
+  catalog: publicCatalog,
+  experiences: publicExperiences
+})
 export type ShowcaseCatalogItem = z.infer<typeof catalogItemSchema>
 
 export const showcaseExperiences: Readonly<Record<string, ApprovedExperience>> = Object.freeze(
@@ -99,6 +148,15 @@ function mediaBaseUrl(): string | undefined {
   return configured ? configured.replace(/\/?$/, '/') : undefined
 }
 
+export function resolveShowcaseAssetUrl(
+  fileName: string,
+  configuredBase: string,
+  pageBase = typeof document === 'undefined' ? 'http://localhost/' : document.baseURI
+): string {
+  const absoluteBase = new URL(configuredBase, pageBase)
+  return new URL(fileName, absoluteBase.href.replace(/\/?$/, '/')).href
+}
+
 function financeApiUrl(path: string): string {
   const configured = import.meta.env.VITE_FINANCE_API_BASE_URL?.trim()
   if (!configured) return path
@@ -108,14 +166,14 @@ function financeApiUrl(path: string): string {
 export function showcaseMediaUrl(item: ShowcaseCatalogItem): string {
   const base = mediaBaseUrl()
   return base
-    ? new URL(item.mediaFile, base).href
+    ? resolveShowcaseAssetUrl(item.mediaFile, base)
     : financeApiUrl(`/api/finance/v1/media/${encodeURIComponent(item.videoId)}/video`)
 }
 
 export function showcasePosterUrl(item: ShowcaseCatalogItem): string {
   const base = mediaBaseUrl()
   return base
-    ? new URL(item.posterFile, base).href
+    ? resolveShowcaseAssetUrl(item.posterFile, base)
     : financeApiUrl(`/api/finance/v1/media/${encodeURIComponent(item.videoId)}/poster`)
 }
 

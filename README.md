@@ -8,7 +8,7 @@
 
 ## 现在包含什么
 
-- 25 条清单视频：小Lin说 15 条、大陆姓陆 10 条；推荐流不会混入旧底座视频。
+- 公开展示 10 条清单视频：小Lin说 5 条、大陆姓陆 5 条；完整生成管线仍校验清单全部 25 条，推荐流不会混入旧底座视频。
 - 两个产品页面：全屏推荐流与作者作品页；旧商城、消息、发布、个人中心等页面不再进入运行时。
 - 六类财包互动：背景卡、快速判断、因果拼接、条件滑杆、反例翻转、概念辨析。
 - 过程式学习足迹：记录已观察证据、回答与待回看节点，不显示总分或伪精度。
@@ -23,7 +23,7 @@
 - [小Lin说的抖音主页](https://www.douyin.com/user/MS4wLjABAAAAunpkE2IXyHAxm4A24G5d1Cf5141pnZy8HwNR5f2-6pI_GYBVR-Pv23uFyfMPB_9I)
 - [大陆姓陆的抖音主页](https://www.douyin.com/user/MS4wLjABAAAA6b3eAQq1k20Z6HyqKmL12qRfa4Ny5HCZ8sT-IsMeYc4H51zhDpYlEXZFb849i4SA)
 
-权利状态按下载清单记录为“用户声明、项目未独立核验”，有效期至 **2026-08-22 上海日末**。公开预览使用从清单源文件生成的 640 长边 H.264/AAC 派生文件；派生媒体放在 GitHub Release，不进入 Git 历史。到期未续期时应停止展示。
+权利状态按下载清单记录为“用户声明、项目未独立核验”，有效期至 **2026-08-22 上海日末**。公开预览使用从清单源文件生成的 640 长边 H.264/AAC 派生文件；源派生保存在 GitHub Release，部署工作流只选择 `src/showcase/public-video-ids.json` 中两位作者各 5 条复制进 Pages artifact，以同域 `video/mp4` + HTTP Range 播放。媒体不进入 Git 历史，到期未续期时应停止展示。
 
 所有财包内容均为 `internal_poc` / `mock`，不是生产审核结论。真实上线仍需最终 ASR、OCR、多模态证据时间轴、财经人审、作者/媒体一致性校验和适用于目标环境的分发权利。
 
@@ -37,7 +37,7 @@ cd douyin
 pnpm install --frozen-lockfile
 ```
 
-如果只看已部署媒体，可配置 Release 地址后直接启动前端：
+如果只看远端 Release 媒体，可配置地址后直接启动前端；部分网络或内嵌浏览器不适合直接流式播放 Release，线上 Pages 使用的是同域媒体目录：
 
 ```bash
 VITE_SHOWCASE_MEDIA_BASE_URL=https://github.com/wzxsph/douyin/releases/download/showcase-media-20260723-v1/ pnpm dev
@@ -66,6 +66,7 @@ pnpm dev
 
 ```text
 src/showcase/                     推荐流、作者页、25 条目录与生成内容
+src/showcase/public-video-ids.json 公开展示的 10 条平衡子集
 src/features/finance-cues/        POI、半屏、六类互动、时间轴、学习足迹
 src/features/video-extensions/    扩展宿主与幂等播放状态机
 server/src/showcase/              25 条内容种子与确定性 LLM Mock 生成器
@@ -93,9 +94,11 @@ git diff --check
 ```bash
 pnpm prepare:showcase-media
 pnpm generate:showcase-content
+pnpm build-gp-pages
+SHOWCASE_MEDIA_SOURCE_DIRECTORY=.analysis-work/showcase-media/<batchId> pnpm stage:showcase-pages-media
 ```
 
-媒体准备会校验路径边界、bytes、SHA-256、时长、尺寸和编解码；不会覆盖 `public/demo/`，也不会把源视频或派生文件加入 Git。
+媒体准备会校验路径边界、bytes、SHA-256、时长、尺寸和编解码；Pages 暂存还会复核 10 个 MP4 的派生 SHA/bytes 及封面格式。流程不会覆盖 `public/demo/`，也不会把源视频或派生文件加入 Git。
 
 ## 安全边界
 

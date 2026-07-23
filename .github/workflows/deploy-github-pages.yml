@@ -40,8 +40,13 @@ jobs:
 
       - name: Build self-contained frontend
         env:
-          VITE_SHOWCASE_MEDIA_BASE_URL: https://github.com/wzxsph/douyin/releases/download/showcase-media-20260723-v1/
+          VITE_SHOWCASE_MEDIA_BASE_URL: ./media/
         run: pnpm build-gp-pages
+
+      - name: Stage ten same-origin media items
+        env:
+          SHOWCASE_MEDIA_SOURCE_BASE_URL: https://github.com/wzxsph/douyin/releases/download/showcase-media-20260723-v1/
+        run: pnpm stage:showcase-pages-media
 
       - name: Configure Pages
         uses: actions/configure-pages@v6

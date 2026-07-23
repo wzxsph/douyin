@@ -30,6 +30,7 @@
     "prepare:showcase-media": "tsx server/src/cli/prepare-showcase-media.ts",
     "generate:showcase-content": "tsx server/src/cli/generate-showcase-content.ts",
     "prepare:showcase": "pnpm prepare:showcase-media && pnpm generate:showcase-content",
+    "stage:showcase-pages-media": "node scripts/stage-showcase-pages-media.mjs",
     "report": "vite build",
     "preview": "vite preview",
     "lint": "eslint  --fix  . --ext .vue,.js,.ts,.tsx,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",

@@ -14,7 +14,7 @@ git log -5 --oneline
 git remote -v
 ```
 
-- 当前应用分支：`feat/caibao-showcase-v2.7`（合并后以 `master` 为交付分支）。
+- 当前线上基线：`master@e85de2bfa1743aaea5204f6e1513de6d56c2e310`；同域媒体修复在 `fix/pages-same-origin-media`。
 - `origin=https://github.com/wzxsph/douyin.git`；`upstream` 只是公共底座。
 - 未获用户当次明确授权，不 push、不 force-push、不创建 PR，也不向 `upstream` 写入。
 - 工作树可能包含用户或其他 Agent 的未提交媒体/fixture；禁止 reset、checkout 覆盖或代提交。
@@ -37,21 +37,24 @@ git remote -v
 
 - 普通推荐只消费 manifest 的有效条目；`?demo=finance-fed` 不决定白名单。运行时只保留推荐流与作者页。
 - 当前 schema v2 清单 25 条均有一一对应的 `finance-showcase-<videoId>` Mock 内容；清单、内容种子和体验映射必须精确同集，缺失时生成失败关闭。
+- 公开 Pages 只展示 `src/showcase/public-video-ids.json` 中 10 条，两位作者各 5 条。它是 manifest 有效集合的显式子集，不得由旧 mock 补位；缩减公开带宽不能破坏 25 条生成管线。
 - catalog/API 失败、授权过期、文件/bytes/SHA/FFprobe 校验失败时 fail closed，绝不回退 `posts6.json`、
   `videos.md`、旧媒体或随机评论。
 - 25 条内容均为 `internal_poc` / `mock`，基于标题与 manifest 元数据的估算触点；不代表公开生产审核通过。
 - 权利状态为用户声明、项目未独立核验，截至 2026-08-22 上海日末。用户已直接要求建立带作者归属的 GitHub Pages 展示；代码中必须保留原作品链接、Mock/非投资建议/非官方声明。媒体不进入 Git 历史，浏览器派生只发布为独立 Release 资产。
-- 浏览器派生文件只写入 `.analysis-work/showcase-media/<batchId>/`，不覆盖 `public/demo/`：
+- 浏览器派生文件只写入 `.analysis-work/showcase-media/<batchId>/`，不覆盖 `public/demo/`。Pages 构建先生成前端，再用 `stage:showcase-pages-media` 将 10 条已校验媒体复制进临时 `dist/media/`；浏览器必须使用 Pages 同域 URL，不再直连 Release：
 
 ```bash
 pnpm prepare:showcase
+VITE_SHOWCASE_MEDIA_BASE_URL=./media/ pnpm build-gp-pages
+SHOWCASE_MEDIA_SOURCE_DIRECTORY=.analysis-work/showcase-media/<batchId> pnpm stage:showcase-pages-media
 ```
 
 ## 代码地图
 
 | 路径                                   | 职责                                               |
 | -------------------------------------- | -------------------------------------------------- |
-| `src/showcase/`                        | 25 条推荐流、作者页、目录与生成内容                |
+| `src/showcase/`                        | 10 条公开推荐、作者页、25 条生成内容与公开子集配置 |
 | `src/features/video-extensions/`       | 扩展契约、宿主、类型化播放请求与幂等控制器         |
 | `src/features/finance-cues/`           | POI、半屏、六类交互、时间轴与学习足迹              |
 | `server/src/showcase/`                 | 内容种子与确定性 LLM Mock 生成器                   |
@@ -91,11 +94,11 @@ git status --short
 ```
 
 专项至少覆盖：manifest 路径穿越/重复 ID/过期/缺失/指纹与时长错误，Range/HEAD，
-推荐空态，自动触点间隔与单实例约束，邀请继续播放、点击暂停、条件恢复、幂等与媒体属性不变。
+推荐空态，10 条公开子集、同域 `video/mp4`/Range、自动触点间隔与单实例约束，邀请继续播放、点击暂停、条件恢复、幂等与媒体属性不变。
 
 ## 禁止事项
 
-- 不提交 `.env*`、token、Cookie、`media-import/`、`.analysis-work/`、`public/demo/` 大视频或模型产物；公开展示媒体只能作为带归属和声明的 Release 派生资产。
+- 不提交 `.env*`、token、Cookie、`media-import/`、`.analysis-work/`、`public/demo/` 大视频、`dist/media/` 或模型产物；公开展示媒体只允许从带归属和声明的 Release 在 Actions 中暂存到 Pages artifact。
 - 不把公开可见等同于有权下载/处理，不绕过登录、验证码、签名或风控。
 - 不把 `internal_poc`、估算时间码、静态 fixture 或 HTTP 客户端存在写成生产审核/真实模型验证。
 - 不恢复“互动不停播”、自动触点独立数量上限、旧推荐池 fallback 或用财包替换作者头像的旧口径。
